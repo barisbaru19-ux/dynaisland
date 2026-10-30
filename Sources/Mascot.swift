@@ -55,9 +55,11 @@ struct MascotReaction: Equatable {
 struct MascotView: View {
     @ObservedObject var model: IslandModel
     var size: CGFloat = 24
+    /// Draws this mascot instead of the chosen one (previews in Settings).
+    var kind: MascotKind? = nil
 
     var body: some View {
-        let kind = model.mascot
+        let kind = self.kind ?? model.mascot
         let base = model.mascotBaseMood
         let reaction = model.mascotReaction
         // Sleeping needs fewer frames.

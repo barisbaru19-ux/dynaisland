@@ -1,5 +1,6 @@
 import AppKit
 import ServiceManagement
+import SwiftUI
 
 @main
 @MainActor
@@ -20,7 +21,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var controller: IslandController?
     private var volume: VolumeMonitor?
     private var updater: Updater?
+    private var bluetooth: BluetoothMonitor?
     private var statusItem: NSStatusItem?
+    private var settingsWindow: NSWindow?
+    private var onboardingWindow: NSWindow?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         let model = IslandModel()
@@ -36,7 +40,102 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         self.updater = updater
         updater.launched()
         updater.startChecking()
+        bluetooth = BluetoothMonitor(model: model)
         buildStatusItem()
+
+        if model.onboarded {
+            startPermissionedFeatures()
+        } else {
+            showOnboarding()
+        }
+    }
+
+    /// Reopening the app from Finder / Spotlight shows Settings (there's no Dock icon to click).
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        showSettings()
+        return true
+    }
+
+    // MARK: - Features that ask for permission (only after the welcome screen)
+
+    private func startPermissionedFeatures() {
+        model?.calendar?.settingsChanged()
+        bluetoothSettingChanged()
+    }
+
+    func bluetoothSettingChanged() {
+        guard let model = model, let bluetooth = bluetooth else { return }
+        if model.bluetoothEnabled && model.onboarded {
+            bluetooth.start()
+        } else {
+            bluetooth.stop()
+        }
+    }
+
+    func requestBluetooth() {
+        model?.bluetoothEnabled = true
+        bluetooth?.start()   // the first start shows macOS's Bluetooth prompt
+    }
+
+    func requestFolderAccess() {
+        guard let model = model else { return }
+        Task.detached(priority: .userInitiated) {
+            let readable = FolderWatcher.probeAccess()   // shows macOS's Downloads / Desktop prompts
+            await MainActor.run { model.folderAccess = readable }
+        }
+    }
+
+    func relayout() {
+        controller?.relayout()
+    }
+
+    // MARK: - Windows
+
+    func showSettings() {
+        guard let model = model else { return }
+        if settingsWindow == nil {
+            settingsWindow = AppDelegate.makeWindow(title: "Pengaturan DynaIsland",
+                                                    content: SettingsView(model: model),
+                                                    size: NSSize(width: 600, height: 500))
+        }
+        bringToFront(settingsWindow)
+    }
+
+    func showOnboarding() {
+        guard let model = model else { return }
+        if onboardingWindow == nil {
+            let view = OnboardingView(model: model) { [weak self] in self?.finishOnboarding() }
+            onboardingWindow = AppDelegate.makeWindow(title: "Selamat datang di DynaIsland", content: view,
+                                                      size: NSSize(width: 600, height: 520))
+        }
+        bringToFront(onboardingWindow)
+    }
+
+    private func finishOnboarding() {
+        guard let model = model else { return }
+        let firstTime = !model.onboarded
+        model.onboarded = true
+        onboardingWindow?.close()
+        onboardingWindow = nil
+        if firstTime { startPermissionedFeatures() }
+        model.react(.happy, seconds: 3)
+    }
+
+    private func bringToFront(_ window: NSWindow?) {
+        NSApp.activate(ignoringOtherApps: true)
+        window?.makeKeyAndOrderFront(nil)
+    }
+
+    private static func makeWindow<Content: View>(title: String, content: Content, size: NSSize) -> NSWindow {
+        let window = NSWindow(contentRect: NSRect(origin: .zero, size: size),
+                              styleMask: [.titled, .closable, .miniaturizable],
+                              backing: .buffered,
+                              defer: false)
+        window.title = title
+        window.isReleasedWhenClosed = false
+        window.contentView = NSHostingView(rootView: content)
+        window.center()
+        return window
     }
 
     // MARK: - Menu bar icon
@@ -49,106 +148,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         let menu = NSMenu()
-
         let header = NSMenuItem(title: "DynaIsland", action: nil, keyEquivalent: "")
         header.isEnabled = false
         menu.addItem(header)
         menu.addItem(.separator())
 
-        let hide = NSMenuItem(title: "Sembunyikan saat idle", action: #selector(toggleHideWhenIdle(_:)), keyEquivalent: "")
-        hide.target = self
-        hide.state = (model?.hideWhenIdle ?? false) ? .on : .off
-        menu.addItem(hide)
-
-        let pill = NSMenuItem(title: "Gaya pil (di bawah kamera)", action: #selector(togglePillBelowCamera(_:)), keyEquivalent: "")
-        pill.target = self
-        pill.state = (model?.pillBelowCamera ?? false) ? .on : .off
-        menu.addItem(pill)
-
-        let mascotItem = NSMenuItem(title: "Maskot", action: nil, keyEquivalent: "")
-        let mascotMenu = NSMenu()
-        for kind in MascotKind.allCases {
-            if kind == .off { mascotMenu.addItem(.separator()) }
-            let item = NSMenuItem(title: kind.title, action: #selector(selectMascot(_:)), keyEquivalent: "")
-            item.target = self
-            item.representedObject = kind.rawValue
-            item.state = kind == model?.mascot ? .on : .off
-            mascotMenu.addItem(item)
-        }
-        mascotMenu.addItem(.separator())
-        let mascotDemo = NSMenuItem(title: "Lihat semua gerakan", action: #selector(runMascotDemo(_:)), keyEquivalent: "")
-        mascotDemo.target = self
-        mascotMenu.addItem(mascotDemo)
-        mascotItem.submenu = mascotMenu
-        menu.addItem(mascotItem)
-
-        let prayerItem = NSMenuItem(title: "Jadwal sholat", action: nil, keyEquivalent: "")
-        let prayerMenu = NSMenu()
-        let prayerToggle = NSMenuItem(title: "Hitung mundur sebelum sholat", action: #selector(togglePrayer(_:)), keyEquivalent: "")
-        prayerToggle.target = self
-        prayerToggle.state = (model?.prayerEnabled ?? true) ? .on : .off
-        prayerMenu.addItem(prayerToggle)
-        prayerMenu.addItem(.separator())
-        let cityHeader = NSMenuItem(title: "Kota", action: nil, keyEquivalent: "")
-        cityHeader.isEnabled = false
-        prayerMenu.addItem(cityHeader)
-        for city in PrayerCity.all {
-            let item = NSMenuItem(title: city.name, action: #selector(selectPrayerCity(_:)), keyEquivalent: "")
-            item.target = self
-            item.representedObject = city.name
-            item.state = city.name == model?.prayerCityName ? .on : .off
-            prayerMenu.addItem(item)
-        }
-        prayerItem.submenu = prayerMenu
-        menu.addItem(prayerItem)
-
-        let volumeItem = NSMenuItem(title: "Pop-up volume", action: nil, keyEquivalent: "")
-        let volumeMenu = NSMenu()
-        for mode in VolumeHUDMode.allCases {
-            let item = NSMenuItem(title: mode.title, action: #selector(selectVolumeMode(_:)), keyEquivalent: "")
-            item.target = self
-            item.representedObject = mode.rawValue
-            item.state = mode == model?.volumeHUDMode ? .on : .off
-            volumeMenu.addItem(item)
-        }
-        volumeItem.submenu = volumeMenu
-        menu.addItem(volumeItem)
-
-        let meeting = NSMenuItem(title: "Pengingat meeting (Kalender)", action: #selector(toggleMeeting(_:)), keyEquivalent: "")
-        meeting.target = self
-        meeting.state = (model?.meetingEnabled ?? true) ? .on : .off
-        menu.addItem(meeting)
-
-        let clips = NSMenuItem(title: "Riwayat clipboard", action: #selector(toggleClipboard(_:)), keyEquivalent: "")
-        clips.target = self
-        clips.state = (model?.clipboardEnabled ?? true) ? .on : .off
-        menu.addItem(clips)
-
-        let autoShelf = NSMenuItem(title: "Download & screenshot ke Shelf", action: #selector(toggleAutoShelf(_:)), keyEquivalent: "")
-        autoShelf.target = self
-        autoShelf.state = (model?.autoShelfEnabled ?? true) ? .on : .off
-        menu.addItem(autoShelf)
-
-        if #available(macOS 13.0, *) {
-            let login = NSMenuItem(title: "Buka saat login", action: #selector(toggleLaunchAtLogin(_:)), keyEquivalent: "")
-            login.target = self
-            login.state = SMAppService.mainApp.status == .enabled ? .on : .off
-            menu.addItem(login)
-        }
-
-        menu.addItem(.separator())
+        let settings = NSMenuItem(title: "Pengaturan…", action: #selector(openSettings), keyEquivalent: ",")
+        settings.target = self
+        menu.addItem(settings)
 
         let update = NSMenuItem(title: "Perbarui DynaIsland…", action: #selector(installUpdate), keyEquivalent: "")
         update.target = self
         menu.addItem(update)
-
-        let demo = NSMenuItem(title: "Coba animasi", action: #selector(runDemo), keyEquivalent: "")
-        demo.target = self
-        menu.addItem(demo)
-
-        let automation = NSMenuItem(title: "Izin Automation (kontrol musik)…", action: #selector(openAutomationSettings), keyEquivalent: "")
-        automation.target = self
-        menu.addItem(automation)
 
         menu.addItem(.separator())
 
@@ -158,6 +169,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         item.menu = menu
         statusItem = item
+    }
+
+    @objc private func openSettings() {
+        showSettings()
     }
 
     /// The logo as a menu bar icon: an island with Moci on the left and an equalizer on the right,
@@ -181,117 +196,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         return image
     }
 
-    @objc private func toggleHideWhenIdle(_ sender: NSMenuItem) {
-        guard let model = model else { return }
-        model.hideWhenIdle.toggle()
-        sender.state = model.hideWhenIdle ? .on : .off
-    }
+    // MARK: - Actions (menu and Settings)
 
-    @objc private func togglePillBelowCamera(_ sender: NSMenuItem) {
-        guard let model = model else { return }
-        model.pillBelowCamera.toggle()
-        sender.state = model.pillBelowCamera ? .on : .off
-        controller?.relayout()
-    }
-
-    @objc private func selectMascot(_ sender: NSMenuItem) {
-        guard let model = model,
-              let raw = sender.representedObject as? String,
-              let kind = MascotKind(rawValue: raw) else { return }
-        model.mascot = kind
-        updateMascotChecks(in: sender.menu, selected: kind)
-        if kind != .off { model.react(.happy, seconds: 2) }
-    }
-
-    @objc private func runMascotDemo(_ sender: NSMenuItem) {
-        guard let model = model else { return }
-        if model.mascot == .off {
-            model.mascot = .moci
-            updateMascotChecks(in: sender.menu, selected: .moci)
-        }
-        model.demoMascot()
-    }
-
-    private func updateMascotChecks(in menu: NSMenu?, selected: MascotKind) {
-        for item in menu?.items ?? [] {
-            if let raw = item.representedObject as? String, let kind = MascotKind(rawValue: raw) {
-                item.state = kind == selected ? .on : .off
-            }
-        }
-    }
-
-    @objc private func selectVolumeMode(_ sender: NSMenuItem) {
-        guard let model = model,
-              let raw = sender.representedObject as? String,
-              let mode = VolumeHUDMode(rawValue: raw) else { return }
-        model.volumeHUDMode = mode
-        for item in sender.menu?.items ?? [] {
-            if let itemRaw = item.representedObject as? String {
-                item.state = itemRaw == raw ? .on : .off
-            }
-        }
-        if mode == .island && !MediaKeys.isTrusted {
-            MediaKeys.askForPermission()
-        }
-        controller?.secondTick()
-    }
-
-    @objc private func toggleMeeting(_ sender: NSMenuItem) {
-        guard let model = model else { return }
-        model.meetingEnabled.toggle()
-        sender.state = model.meetingEnabled ? .on : .off
-        model.calendar?.settingsChanged()
-    }
-
-    @objc private func toggleClipboard(_ sender: NSMenuItem) {
-        guard let model = model else { return }
-        model.clipboardEnabled.toggle()
-        sender.state = model.clipboardEnabled ? .on : .off
-    }
-
-    @objc private func toggleAutoShelf(_ sender: NSMenuItem) {
-        guard let model = model else { return }
-        model.autoShelfEnabled.toggle()
-        sender.state = model.autoShelfEnabled ? .on : .off
-    }
-
-    @objc private func togglePrayer(_ sender: NSMenuItem) {
-        guard let model = model else { return }
-        model.prayerEnabled.toggle()
-        sender.state = model.prayerEnabled ? .on : .off
-        controller?.secondTick()
-    }
-
-    @objc private func selectPrayerCity(_ sender: NSMenuItem) {
-        guard let model = model, let name = sender.representedObject as? String else { return }
-        model.prayerCityName = name
-        model.dismissedPrayerKey = nil
-        for item in sender.menu?.items ?? [] {
-            if let cityName = item.representedObject as? String {
-                item.state = cityName == name ? .on : .off
-            }
-        }
-        controller?.secondTick()
-    }
-
-    @objc private func toggleLaunchAtLogin(_ sender: NSMenuItem) {
-        guard #available(macOS 13.0, *) else { return }
-        let service = SMAppService.mainApp
-        do {
-            if service.status == .enabled {
-                try service.unregister()
-            } else {
-                try service.register()
-            }
-        } catch {
-            NSSound.beep()
-        }
-        sender.state = service.status == .enabled ? .on : .off
-    }
-
-    /// Menu → "Perbarui DynaIsland…": downloads the newest build from GitHub
-    /// (or, offline, installs a DynaIsland zip from Downloads).
-    @objc private func installUpdate() {
+    /// Downloads the newest build from GitHub (or, offline, installs a DynaIsland zip from Downloads).
+    @objc func installUpdate() {
         guard let model = model, !model.isUpdating else { return }
         NSApp.activate(ignoringOtherApps: true)
         let alert = NSAlert()
@@ -319,15 +227,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
-    @objc private func runDemo() {
+    func runDemo() {
         guard let model = model else { return }
         let percent = model.battery?.percent ?? 80
         model.show(IslandNotice(symbol: "bolt.fill", title: "Mengisi daya", detail: "\(percent)%", tint: .green))
-    }
-
-    @objc private func openAutomationSettings() {
-        if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Automation") {
-            NSWorkspace.shared.open(url)
-        }
     }
 }

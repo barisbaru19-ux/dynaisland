@@ -346,6 +346,22 @@ final class IslandModel: ObservableObject {
         didSet { UserDefaults.standard.set(autoShelfEnabled, forKey: "autoShelfEnabled") }
     }
 
+    // First launch / feature switches
+    @Published var onboarded: Bool = UserDefaults.standard.bool(forKey: "onboarded") {
+        didSet { UserDefaults.standard.set(onboarded, forKey: "onboarded") }
+    }
+    /// nil until Downloads / Desktop have been read once.
+    @Published var folderAccess: Bool?
+    @Published var bluetoothEnabled: Bool = (UserDefaults.standard.object(forKey: "bluetoothEnabled") as? Bool) ?? true {
+        didSet { UserDefaults.standard.set(bluetoothEnabled, forKey: "bluetoothEnabled") }
+    }
+    @Published var gesturesEnabled: Bool = (UserDefaults.standard.object(forKey: "gesturesEnabled") as? Bool) ?? true {
+        didSet { UserDefaults.standard.set(gesturesEnabled, forKey: "gesturesEnabled") }
+    }
+    /// Volume level shown briefly in the open island after a scroll gesture.
+    @Published var volumeFlash: Double?
+    private var volumeFlashTask: Task<Void, Never>?
+
     // Volume pop-up: the island's, macOS's, or both
     @Published var volumeHUDMode: VolumeHUDMode = VolumeHUDMode(rawValue: UserDefaults.standard.string(forKey: "volumeHUDMode") ?? "") ?? .island {
         didSet { UserDefaults.standard.set(volumeHUDMode.rawValue, forKey: "volumeHUDMode") }
@@ -445,8 +461,19 @@ final class IslandModel: ObservableObject {
         scheduleNoticeEnd(after: 1.8)
     }
 
+    func flashVolume(_ level: Double) {
+        volumeFlash = level
+        volumeFlashTask?.cancel()
+        volumeFlashTask = Task { [weak self] in
+            try? await Task.sleep(nanoseconds: 1_200_000_000)
+            guard !Task.isCancelled else { return }
+            self?.volumeFlash = nil
+        }
+    }
+
     /// Once per build: explain and show macOS's Accessibility dialog.
     private func askForMediaKeysOnce() {
+        guard onboarded else { return }   // the welcome screen asks first
         let defaults = UserDefaults.standard
         let build = Updater.currentBuild
         guard defaults.integer(forKey: "askedAccessibilityBuild") != build else { return }

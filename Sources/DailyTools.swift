@@ -136,7 +136,7 @@ final class CalendarMonitor: NSObject {
     /// After launch or after the menu toggle: ask for access the first time, then read events.
     func settingsChanged() {
         updateAccess()
-        if model.meetingEnabled && model.calendarAccess == .notDetermined {
+        if model.meetingEnabled && model.calendarAccess == .notDetermined && model.onboarded {
             requestAccess()
         } else {
             refresh()
@@ -330,7 +330,7 @@ final class FolderWatcher {
     func tick(now: Date = Date()) {
         guard now.timeIntervalSince(lastScan) >= 2, !scanning else { return }
         lastScan = now
-        guard model.autoShelfEnabled else {
+        guard model.autoShelfEnabled, model.onboarded else {
             known.removeAll()
             pending.removeAll()
             return
@@ -346,6 +346,8 @@ final class FolderWatcher {
 
     private func apply(_ snapshots: [FolderSnapshot]) {
         scanning = false
+        let readable = snapshots.allSatisfy { $0.entries != nil }
+        if model.folderAccess != readable { model.folderAccess = readable }
         guard model.autoShelfEnabled else { return }
         for snapshot in snapshots {
             guard let entries = snapshot.entries else { continue }
@@ -432,6 +434,14 @@ final class FolderWatcher {
             return URL(fileURLWithPath: expanded, isDirectory: true).standardizedFileURL.path
         }
         return home.appendingPathComponent("Desktop", isDirectory: true).standardizedFileURL.path
+    }
+
+    /// Reads Downloads and the Desktop once, which makes macOS ask for access. Off the main thread.
+    nonisolated static func probeAccess() -> Bool {
+        let home = FileManager.default.homeDirectoryForCurrentUser
+        let downloads = try? FileManager.default.contentsOfDirectory(atPath: home.appendingPathComponent("Downloads").path)
+        let desktop = try? FileManager.default.contentsOfDirectory(atPath: home.appendingPathComponent("Desktop").path)
+        return downloads != nil && desktop != nil
     }
 
     nonisolated private static func snapshot(of folder: WatchedFolder) -> FolderSnapshot {

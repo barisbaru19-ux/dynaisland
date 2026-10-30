@@ -45,6 +45,11 @@ final class IslandController: NSObject {
     /// button is held means a file (or other) drag session is in progress.
     private let dragPasteboard = NSPasteboard(name: .drag)
     private var idleDragCount = 0
+    // Gestures on the open island
+    private var scrollMonitor: Any?
+    private var swipeX: CGFloat = 0
+    private var swipeY: CGFloat = 0
+    private var swipeDone = false
 
     init(model: IslandModel) {
         self.model = model
@@ -69,6 +74,10 @@ final class IslandController: NSObject {
 
         nowPlaying.start()
         battery.start()
+        scrollMonitor = NSEvent.addLocalMonitorForEvents(matching: .scrollWheel) { [weak self] event in
+            self?.handleScroll(event)
+            return event
+        }
         model.calendar = calendar
         calendar.start()
         idleDragCount = dragPasteboard.changeCount
@@ -253,6 +262,56 @@ final class IslandController: NSObject {
                 enterSince = nil
             }
         }
+    }
+
+    // MARK: - Gestures (Musik tab)
+
+    /// Two fingers left / right: next / previous song. Two fingers up / down (or the mouse wheel): volume.
+    private func handleScroll(_ event: NSEvent) {
+        guard model.isHovered, model.gesturesEnabled, model.openTab == .music,
+              event.window === panel, event.momentumPhase.isEmpty else { return }
+
+        // Direction of the fingers, whatever "natural scrolling" is set to.
+        let inverted = event.isDirectionInvertedFromDevice
+        let right = inverted ? event.scrollingDeltaX : -event.scrollingDeltaX
+        let up = inverted ? -event.scrollingDeltaY : event.scrollingDeltaY
+
+        if !event.hasPreciseScrollingDeltas {
+            // Mouse wheel: one notch, one step.
+            if abs(up) > 0.1 { stepVolume(up > 0 ? 1 : -1) }
+            return
+        }
+
+        if event.phase.contains(.began) {
+            swipeX = 0
+            swipeY = 0
+            swipeDone = false
+        }
+        swipeX += right
+        swipeY += up
+
+        if !swipeDone && abs(swipeX) > 70 && abs(swipeX) > abs(swipeY) * 1.5, model.track != nil {
+            swipeDone = true
+            if swipeX < 0 { model.player?.next() } else { model.player?.previous() }
+            NSHapticFeedbackManager.defaultPerformer.perform(.generic, performanceTime: .now)
+            model.react(.happy, seconds: 1)
+            return
+        }
+        guard abs(swipeY) > abs(swipeX) else { return }
+        while swipeY > 22 {
+            swipeY -= 22
+            stepVolume(1)
+        }
+        while swipeY < -22 {
+            swipeY += 22
+            stepVolume(-1)
+        }
+    }
+
+    private func stepVolume(_ direction: Int) {
+        guard SystemVolume.isAdjustable() else { return }
+        SystemVolume.change(by: direction > 0 ? 1.0 / 16.0 : -1.0 / 16.0)
+        if let level = SystemVolume.currentLevel() { model.flashVolume(level) }
     }
 
     private func islandRect(size: CGSize, in frame: NSRect) -> NSRect {

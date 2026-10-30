@@ -136,6 +136,12 @@ enum SystemVolume {
         if level <= 0.0001 { setMuted(true, of: device) }
     }
 
+    /// Current output volume, 0…1.
+    static func currentLevel() -> Double? {
+        guard let device = defaultOutput(), let level = volume(of: device) else { return nil }
+        return isMuted(device) ? 0 : Double(level)
+    }
+
     static func toggleMute() {
         guard let device = defaultOutput() else { return }
         setMuted(!isMuted(device), of: device)

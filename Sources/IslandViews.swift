@@ -332,6 +332,11 @@ struct MusicTabView: View {
                 }
 
                 ProgressRow(track: track, sampledAt: model.sampledAt, tint: model.accent)
+                    .overlay(alignment: .center) {
+                        if let level = model.volumeFlash {
+                            VolumeFlashView(level: level)
+                        }
+                    }
 
                 if model.automationDenied {
                     Text("Izinkan Automation di System Settings agar tombol kontrol aktif")
@@ -496,6 +501,30 @@ struct EqualizerView: View {
         let b = abs(sin(time * (3.1 + i * 0.9) + i * 2.1))
         let level = a * 0.65 + b * 0.35
         return minimum + CGFloat(level) * (height - minimum)
+    }
+}
+
+/// Shown over the progress bar for a moment while scrolling to change the volume.
+struct VolumeFlashView: View {
+    let level: Double
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Image(systemName: level <= 0.001 ? "speaker.slash.fill" : "speaker.wave.2.fill")
+                .font(.system(size: 10, weight: .semibold))
+            ZStack(alignment: .leading) {
+                Capsule().fill(Color.white.opacity(0.2))
+                Capsule().fill(Color.white).frame(width: max(4, 120 * CGFloat(min(1, max(0, level)))))
+            }
+            .frame(width: 120, height: 5)
+            Text("\(Int((level * 100).rounded()))%")
+                .font(.system(size: 10, weight: .semibold).monospacedDigit())
+                .frame(width: 32, alignment: .trailing)
+        }
+        .foregroundColor(.white)
+        .padding(.horizontal, 12)
+        .frame(height: 22)
+        .background(Capsule().fill(Color(white: 0.14)))
     }
 }
 
