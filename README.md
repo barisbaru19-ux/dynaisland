@@ -227,7 +227,7 @@ Sources/
   SettingsViews.swift     jendela Pengaturan + layar sambutan
   SupportViews.swift      "Yang baru", laporkan masalah (info teknis tanpa data pribadi)
   HotKeys.swift           pintasan keyboard global (tanpa izin)
-docs/                     halaman download (GitHub Pages)
+index.html                halaman download (GitHub Pages, dari folder utama)
 sign-local.sh             tanda tangan per Mac supaya izin tidak hilang saat update
 Resources/AppIcon.svg     logo (sumber); AppIcon.png dipakai build.sh untuk ikon app
 install.sh                pemasang satu baris (curl)
