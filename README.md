@@ -139,8 +139,12 @@ Menu bar sendiri hanya berisi **Pengaturan…**, **Perbarui DynaIsland…**, dan
 
 ## Batasan yang perlu diketahui
 
-- **Hanya Spotify dan Apple Music (app desktop).** Sejak macOS 15.4, Apple menutup akses
-  "Now Playing" sistem untuk app pihak ketiga, jadi YouTube/Spotify di browser tidak terbaca.
+- **Musik dari semua app**: YouTube atau Spotify di browser, Apple Podcasts, VLC, Spotify, Music, dan lainnya
+  terbaca lewat [mediaremote-adapter](https://github.com/ungive/mediaremote-adapter) (BSD 3-Clause, ikut di app
+  dari GitHub). Sejak macOS 15.4 Apple hanya mengizinkan program buatannya sendiri membaca "Now Playing",
+  jadi adapter ini dijalankan lewat `/usr/bin/perl` bawaan Mac. Kalau suatu versi macOS memblokirnya,
+  DynaIsland otomatis kembali ke Spotify dan Apple Music saja. App yang di-build sendiri dari zip
+  (tanpa GitHub) juga hanya membaca Spotify dan Apple Music.
 - Kalau izin Automation ditolak, judul lagu tetap muncul, tetapi tombol kontrol mati dan
   cover Apple Music tidak tampil.
 - Izin cukup diberikan sekali. Setiap Mac membuat sertifikat tanda tangan sendiri (otomatis, disimpan di
@@ -205,6 +209,7 @@ Sources/
   Updater.swift           cek versi baru di GitHub + pasang update tanpa Terminal
   MediaKeys.swift         tombol volume ditangani sendiri, supaya HUD macOS tidak ikut muncul
   BluetoothMonitor.swift  pop-up AirPods / perangkat Bluetooth
+  SystemNowPlaying.swift  musik dari semua app (mediaremote-adapter lewat /usr/bin/perl)
   SettingsViews.swift     jendela Pengaturan + layar sambutan
 sign-local.sh             tanda tangan per Mac supaya izin tidak hilang saat update
 Resources/AppIcon.svg     logo (sumber); AppIcon.png dipakai build.sh untuk ikon app
