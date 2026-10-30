@@ -60,10 +60,8 @@ struct IslandContainer: View {
         case .idle:
             if layout.hasNotch {
                 StatusEarsView(model: model, layout: layout)
-            } else if model.mascot != .off {
-                MascotView(model: model, size: 17)
             } else {
-                Color.clear
+                MenuBarIdleView(model: model)
             }
         case .music:
             CompactMusicView(model: model, layout: layout)
@@ -125,6 +123,37 @@ struct StatusEarsView: View {
     }
 }
 
+/// At rest on a screen without a notch: mascot (or battery) and the time, inside the menu bar.
+@MainActor
+struct MenuBarIdleView: View {
+    @ObservedObject var model: IslandModel
+
+    var body: some View {
+        HStack(spacing: 6) {
+            if model.mascot != .off {
+                MascotView(model: model, size: 16)
+            } else if let battery = model.battery {
+                HStack(spacing: 3) {
+                    Image(systemName: BatteryBadge.symbol(for: battery))
+                        .font(.system(size: 11))
+                        .foregroundColor(BatteryBadge.tint(for: battery))
+                    Text("\(battery.percent)")
+                        .font(.system(size: 10, weight: .semibold).monospacedDigit())
+                        .foregroundColor(Color.white.opacity(0.85))
+                }
+            }
+            Spacer(minLength: 4)
+            TimelineView(.everyMinute) { context in
+                Text(context.date.formatted(date: .omitted, time: .shortened))
+                    .font(.system(size: 11, weight: .semibold).monospacedDigit())
+                    .foregroundColor(.white)
+                    .lineLimit(1)
+            }
+        }
+        .padding(.horizontal, 10)
+    }
+}
+
 @MainActor
 struct CompactMusicView: View {
     @ObservedObject var model: IslandModel
@@ -148,10 +177,10 @@ struct CompactMusicView: View {
             }
         } else {
             HStack(spacing: 0) {
-                ArtworkView(image: model.artwork, size: 18, radius: 5)
+                ArtworkView(image: model.artwork, size: 16, radius: 4)
                 Spacer(minLength: 8)
                 if model.mascot != .off {
-                    MascotView(model: model, size: 18)
+                    MascotView(model: model, size: 16)
                         .padding(.trailing, 4)
                 }
                 EqualizerView(isPlaying: isPlaying, color: model.accent, height: 13)
@@ -184,7 +213,7 @@ struct PeekMusicView: View {
             }
         } else {
             HStack(spacing: 8) {
-                ArtworkView(image: model.artwork, size: 22, radius: 6)
+                ArtworkView(image: model.artwork, size: layout.isMenuBarPill ? 16 : 22, radius: layout.isMenuBarPill ? 4 : 6)
                 Text(model.track?.title ?? "")
                     .font(.system(size: 11, weight: .semibold))
                     .foregroundColor(.white)

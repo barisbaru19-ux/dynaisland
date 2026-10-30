@@ -169,7 +169,13 @@ final class IslandController: NSObject {
     }
 
     private func layout(for screen: NSScreen) -> IslandLayout {
-        guard let notch = Self.notchSize(of: screen) else { return .plain }
+        guard let notch = Self.notchSize(of: screen) else {
+            // MacBooks from 2020 and earlier, external displays: a pill inside the menu bar.
+            var plain = IslandLayout.plain
+            let bar = screen.frame.maxY - screen.visibleFrame.maxY
+            plain.menuBarHeight = bar > 10 ? bar : 24   // 0 when the menu bar auto-hides
+            return plain
+        }
         if model.pillBelowCamera {
             return IslandLayout(notch: nil, pillTop: notch.height + 5, camera: notch)  // pill below the camera
         }

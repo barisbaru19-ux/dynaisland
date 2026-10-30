@@ -132,6 +132,8 @@ struct IslandLayout: Equatable {
     var pillTop: CGFloat = 1
     /// Camera notch the floating pill sits *under* (pill look). Hovering the camera opens the island.
     var camera: CGSize? = nil
+    /// Menu bar height on screens without a notch (MacBooks from 2020 and earlier, external displays).
+    var menuBarHeight: CGFloat = 24
 
     static let plain = IslandLayout(notch: nil)
 
@@ -143,6 +145,8 @@ struct IslandLayout: Equatable {
     static let shoulderSize: CGFloat = 6
 
     var hasNotch: Bool { notch != nil }
+    /// No camera notch at all: the compact pill sits inside the menu bar, like a menu bar item.
+    var isMenuBarPill: Bool { notch == nil && camera == nil }
     var notchWidth: CGFloat { notch?.width ?? 0 }
     var notchHeight: CGFloat { notch?.height ?? 0 }
     var shoulder: CGFloat { hasNotch ? IslandLayout.shoulderSize : 0 }
@@ -157,7 +161,7 @@ struct IslandLayout: Equatable {
     static let openBodyHeight: CGFloat = 190
 
     func size(for mode: IslandMode) -> CGSize {
-        guard let notch = notch else { return mode.plainSize }
+        guard let notch = notch else { return isMenuBarPill ? menuBarSize(for: mode) : mode.plainSize }
         let w = notch.width
         let h = notch.height
         let s = 2 * IslandLayout.shoulderSize
@@ -168,6 +172,20 @@ struct IslandLayout: Equatable {
         case .focus: return CGSize(width: w + 2 * IslandLayout.wing + s, height: h)
         case .notice, .prayer, .meeting: return CGSize(width: w + 2 * IslandLayout.noticeWing + s, height: h)
         case .expanded: return CGSize(width: openWidth + s, height: h + IslandLayout.openBodyHeight)
+        }
+    }
+
+    /// Compact states stay within the menu bar (1 pt from the top, 2 pt shorter than the bar),
+    /// so they never hang over browser tabs or window title bars.
+    private func menuBarSize(for mode: IslandMode) -> CGSize {
+        let h = max(18, menuBarHeight - 2)
+        switch mode {
+        case .hidden: return CGSize(width: 90, height: h - 4)
+        case .idle: return CGSize(width: 150, height: h)
+        case .music, .focus: return CGSize(width: 236, height: h)
+        case .peek: return CGSize(width: 320, height: h)
+        case .notice, .prayer, .meeting: return CGSize(width: 300, height: h)
+        case .expanded: return mode.plainSize
         }
     }
 
