@@ -67,7 +67,11 @@ if [[ -n "${BUILD_NUMBER:-}" ]]; then
   plutil -replace CFBundleVersion -string "${BUILD_NUMBER}" "${APP}/Contents/Info.plist"
   plutil -replace CFBundleShortVersionString -string "1.${BUILD_NUMBER}" "${APP}/Contents/Info.plist"
 fi
-codesign --force --sign - "${APP}" >/dev/null 2>&1
+if [[ "${MODE}" == "--release" ]]; then
+  codesign --force --sign - "${APP}" >/dev/null 2>&1   # each Mac re-signs it with its own certificate
+else
+  /bin/bash ./sign-local.sh "${APP}"
+fi
 echo "✅ Build selesai: ${APP}"
 
 if [[ "${MODE}" == "--release" ]]; then

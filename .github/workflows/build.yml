@@ -28,6 +28,19 @@ jobs:
           chmod +x build.sh
           ./build.sh --release
 
+      - name: Test local signing (what each Mac does after installing)
+        run: |
+          cp -R build/DynaIsland.app "$RUNNER_TEMP/Test.app"
+          bash ./sign-local.sh "$RUNNER_TEMP/Test.app"
+          codesign -dvv "$RUNNER_TEMP/Test.app" 2>&1 | grep -E "Authority|Identifier|Signature" || true
+          codesign -dr - "$RUNNER_TEMP/Test.app" 2>&1
+          # Second run must reuse the same certificate (same requirement = permissions kept).
+          REQ1="$(codesign -dr - "$RUNNER_TEMP/Test.app" 2>&1 | tail -1)"
+          bash ./sign-local.sh "$RUNNER_TEMP/Test.app"
+          REQ2="$(codesign -dr - "$RUNNER_TEMP/Test.app" 2>&1 | tail -1)"
+          echo "$REQ1"; echo "$REQ2"
+          [[ "$REQ1" == "$REQ2" && "$REQ1" == *"certificate"* ]] || { echo "::error::Local signing is not stable"; exit 1; }
+
       - name: Package
         run: |
           ditto -c -k --keepParent build/DynaIsland.app DynaIsland-app.zip

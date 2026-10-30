@@ -11,6 +11,7 @@ APP_NAME="DynaIsland"
 DEST="/Applications/${APP_NAME}.app"
 RELEASE_URL="https://github.com/${REPO}/releases/latest/download/${APP_NAME}-app.zip"
 SOURCE_URL="https://codeload.github.com/${REPO}/tar.gz/refs/heads/main"
+SIGN_URL="https://raw.githubusercontent.com/${REPO}/main/sign-local.sh"
 
 echo ""
 echo "  DynaIsland — memasang..."
@@ -32,6 +33,10 @@ if curl -fsSL "${RELEASE_URL}" -o "${TMP}/app.zip"; then
   rm -rf "${DEST}"
   ditto "${TMP}/app/${APP_NAME}.app" "${DEST}"
   xattr -cr "${DEST}" 2>/dev/null || true
+  # Same signature on every update → macOS keeps the permissions you already gave.
+  if curl -fsSL "${SIGN_URL}" -o "${TMP}/sign-local.sh"; then
+    /bin/bash "${TMP}/sign-local.sh" "${DEST}" || true
+  fi
   open "${DEST}"
 else
   echo "• Versi siap pakai belum ada, build dari kode sumber..."
