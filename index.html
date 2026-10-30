@@ -33,32 +33,62 @@
   .hero h1 span { background: linear-gradient(90deg, var(--accent), var(--pink)); -webkit-background-clip: text; background-clip: text; color: transparent; }
   .hero p.lead { color: var(--muted); font-size: clamp(16px, 2.2vw, 19px); max-width: 640px; margin: 0 auto 30px; }
 
-  /* the island demo */
-  .screen { position: relative; max-width: 640px; height: 200px; margin: 0 auto 34px; border-radius: 18px;
+  /* live island demo: a 680 × 250 stage, scaled to fit small screens */
+  .demo { max-width: 680px; margin: 0 auto 18px; }
+  .stage-wrap { position: relative; width: 100%; }
+  .stage { position: absolute; top: 0; left: 0; width: 680px; height: 250px; transform-origin: top left; border-radius: 18px;
     background: linear-gradient(160deg, #2a2f63, #4b2a7b 60%, #6a3a8f); overflow: hidden; border: 1px solid var(--line); }
-  .menubar { height: 26px; background: rgba(0,0,0,.25); display: flex; justify-content: space-between; align-items: center; padding: 0 12px; font-size: 12px; color: #e8e8f0; }
-  .island { position: absolute; top: 0; left: 50%; transform: translateX(-50%); height: 30px; width: 300px; background: #000;
-    border-radius: 0 0 14px 14px; display: flex; align-items: center; justify-content: space-between; padding: 0 12px;
-    transition: width .5s cubic-bezier(.3,1.4,.5,1), height .5s cubic-bezier(.3,1.4,.5,1), border-radius .5s; }
-  .island.open { width: 420px; height: 150px; border-radius: 0 0 28px 28px; align-items: flex-start; padding-top: 6px; }
+  .menubar { height: 30px; display: flex; justify-content: space-between; align-items: center; padding: 0 14px; font-size: 12.5px; color: #e8e8f0; background: rgba(0,0,0,.22); }
+  .menubar .l span { margin-right: 14px; } .menubar .l span:first-child { font-weight: 700; }
+  .island { position: absolute; top: 0; left: 50%; transform: translateX(-50%); width: 330px; height: 30px; background: #000; color: #fff;
+    border-radius: 0 0 14px 14px; overflow: hidden; font-size: 12.5px; font-weight: 600;
+    transition: width .55s cubic-bezier(.3,1.35,.5,1), height .55s cubic-bezier(.3,1.35,.5,1), border-radius .45s; }
+  .island .lens { position: absolute; top: 10px; left: 50%; width: 9px; height: 9px; margin-left: -4.5px; border-radius: 50%; background: #1b2033; }
+  .ear { position: absolute; top: 0; height: 30px; display: flex; align-items: center; gap: 7px; white-space: nowrap; transition: opacity .25s; }
+  .ear.l { left: 14px; } .ear.r { right: 14px; }
+  .body { position: absolute; left: 20px; right: 20px; top: 38px; bottom: 14px; opacity: 0; transition: opacity .25s; }
+  .island.open .body { opacity: 1; transition-delay: .28s; }
+  .fade { opacity: 0 !important; }
+  .yellow { color: #ffcc33; } .blue { color: #5aaeff; } .green { color: #4cd964; } .dim { color: #9a9aa8; font-weight: 500; }
+  .ti { font-size: 15px; }
+
   .moci { width: 22px; height: 18px; position: relative; flex: none; }
-  .moci::before { content: ""; position: absolute; inset: 2px 1px 0; border-radius: 50%; background: #f4f1ea; animation: bob 1.6s ease-in-out infinite; }
+  .moci::before { content: ""; position: absolute; inset: 2px 1px 0; border-radius: 50%; background: #f4f1ea; }
   .moci i { position: absolute; bottom: 6px; width: 2.5px; height: 4px; border-radius: 2px; background: #111; z-index: 1; animation: blink 4s infinite; }
+  .moci.dance { animation: dance .45s ease-in-out infinite alternate; transform-origin: 50% 100%; }
+  .moci.sleep i { height: 1.5px; bottom: 7px; animation: none; }
+  .zz { font-size: 11px; color: #ccc; animation: zz 2s infinite; } .zz + .zz { animation-delay: .7s; }
+  .cover { width: 20px; height: 20px; border-radius: 5px; background: linear-gradient(135deg, #ff6b4a, #ffb547); flex: none; }
   .eq { display: flex; gap: 2.5px; align-items: center; height: 14px; }
-  .eq b { width: 3px; border-radius: 2px; background: linear-gradient(var(--pink), var(--accent2)); animation: eq .5s ease-in-out infinite alternate; }
+  .eq b { width: 3px; border-radius: 2px; background: linear-gradient(#ff8fb8, #5de0b5); animation: eq .5s ease-in-out infinite alternate; }
   .eq b:nth-child(2) { animation-delay: .15s } .eq b:nth-child(3) { animation-delay: .3s } .eq b:nth-child(4) { animation-delay: .45s }
-  .openbody { position: absolute; left: 22px; right: 22px; top: 40px; display: flex; gap: 14px; align-items: center; opacity: 0; transition: opacity .3s; }
-  .island.open .openbody { opacity: 1; transition-delay: .25s; }
-  .cover { width: 54px; height: 54px; border-radius: 12px; background: linear-gradient(135deg, #ff6b4a, #ffb547); flex: none; }
-  .meta { text-align: left; font-size: 13px; line-height: 1.35; }
-  .meta b { display: block; font-size: 14px; }
-  .meta span { color: #9a9aa8; }
-  .bar { position: absolute; left: 22px; right: 22px; bottom: 22px; height: 4px; border-radius: 2px; background: #333; opacity: 0; transition: opacity .3s; }
-  .bar::after { content: ""; display: block; width: 38%; height: 100%; border-radius: 2px; background: var(--pink); }
-  .island.open .bar { opacity: 1; transition-delay: .25s; }
-  .hint { position: absolute; bottom: 12px; width: 100%; text-align: center; font-size: 13px; color: rgba(255,255,255,.75); }
+  .ring { width: 18px; height: 18px; } .ring circle { fill: none; stroke-width: 3; }
+  .lvl { width: 64px; height: 4px; border-radius: 2px; background: #333; overflow: hidden; } .lvl b { display: block; height: 100%; background: #fff; }
+
+  .tabs { display: flex; gap: 6px; justify-content: center; font-size: 11px; margin-bottom: 12px; }
+  .tabs span { padding: 3px 9px; border-radius: 10px; color: #8d8d99; } .tabs span.on { background: #26262c; color: #fff; }
+  .row { display: flex; gap: 12px; align-items: center; }
+  .bigcover { width: 50px; height: 50px; border-radius: 12px; background: linear-gradient(135deg, #ff6b4a, #ffb547); flex: none; }
+  .t1 { font-size: 14px; } .t2 { font-size: 12px; color: #9a9aa8; font-weight: 500; }
+  .prog { height: 4px; border-radius: 2px; background: #333; margin: 12px 0 8px; } .prog b { display: block; width: 38%; height: 100%; border-radius: 2px; background: #ff8fb8; }
+  .ctl { display: flex; justify-content: center; gap: 38px; } .ctl svg { width: 18px; height: 18px; }
+  .tiles { display: flex; gap: 10px; justify-content: center; }
+  .tile { width: 70px; text-align: center; font-size: 10px; color: #ccc; font-weight: 500; }
+  .tile .ic { width: 42px; height: 46px; margin: 0 auto 4px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 800; letter-spacing: .5px; }
+  .pill { display: inline-flex; align-items: center; gap: 5px; background: #fff; color: #000; border-radius: 13px; padding: 4px 11px; font-size: 11.5px; }
+  .pill.ghost { background: #26262c; color: #fff; }
+  .clip { display: flex; justify-content: space-between; gap: 10px; background: #17171b; border-radius: 8px; padding: 6px 10px; font-size: 11.5px; font-weight: 500; margin-bottom: 5px; }
+  .clip span:last-child { color: #8d8d99; flex: none; }
+
+  .caption { position: absolute; left: 0; right: 0; bottom: 16px; text-align: center; color: #fff; font-size: 17px; font-weight: 700; text-shadow: 0 1px 8px rgba(0,0,0,.35); transition: opacity .25s; }
+  .caption small { display: block; font-size: 13px; font-weight: 500; color: rgba(255,255,255,.75); margin-top: 2px; }
+  .chips { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin: 16px auto 34px; max-width: 760px; }
+  .chips button { border: 1px solid var(--line); background: var(--card); color: var(--muted); border-radius: 999px; padding: 6px 13px; font-size: 13px; cursor: pointer; }
+  .chips button:hover { color: var(--text); }
+  .chips button.on { background: var(--accent); border-color: var(--accent); color: #0d0f1c; font-weight: 700; }
   @keyframes eq { from { height: 4px } to { height: 14px } }
-  @keyframes bob { 50% { transform: translateY(-2px) } }
+  @keyframes dance { from { transform: translateY(1px) rotate(-8deg) } to { transform: translateY(-2px) rotate(8deg) } }
+  @keyframes zz { 0% { opacity: 0; transform: translateY(3px) } 50% { opacity: 1 } 100% { opacity: 0; transform: translateY(-5px) } }
   @keyframes blink { 0%, 92%, 100% { transform: scaleY(1) } 95% { transform: scaleY(.1) } }
 
   .install { max-width: 720px; margin: 0 auto; }
@@ -96,7 +126,6 @@
 
   @media (max-width: 560px) {
     nav { display: none; }
-    .island { width: 240px; } .island.open { width: 92%; }
     .cmd { flex-direction: column; } .cmd button { padding: 12px; }
   }
 </style>
@@ -118,16 +147,21 @@
     <p class="lead">Area hitam di sekitar kamera jadi hidup: musik dari semua app, maskot yang lucu, jadwal sholat,
       meeting, Shelf + AirDrop, dan riwayat clipboard. Gratis.</p>
 
-    <div class="screen" id="demo" aria-label="Contoh DynaIsland">
-      <div class="menubar"><span>&nbsp;Finder&nbsp;&nbsp;File&nbsp;&nbsp;Edit</span><span>Jum 19.51</span></div>
-      <div class="island" id="island">
-        <span class="moci"><i style="left:7px"></i><i style="left:13px"></i></span>
-        <span class="eq"><b></b><b></b><b></b><b></b></span>
-        <div class="openbody"><span class="cover"></span><span class="meta"><b>Judul lagu favoritmu</b><span>YouTube · Google Chrome</span></span></div>
-        <div class="bar"></div>
+    <div class="demo" aria-label="Contoh DynaIsland yang berganti-ganti fitur">
+      <div class="stage-wrap" id="stage-wrap">
+        <div class="stage" id="stage">
+          <div class="menubar"><span class="l"><span>Finder</span><span>File</span><span>Edit</span></span><span>Jum 19.51</span></div>
+          <div class="island" id="island">
+            <span class="lens"></span>
+            <div class="ear l" id="ear-l"></div>
+            <div class="ear r" id="ear-r"></div>
+            <div class="body" id="body"></div>
+          </div>
+          <div class="caption" id="caption"></div>
+        </div>
       </div>
-      <div class="hint" id="hint">Arahkan kursor ke notch untuk membukanya</div>
     </div>
+    <div class="chips" id="chips"></div>
 
     <div class="install" id="pasang">
       <div class="cmd">
@@ -218,16 +252,133 @@
     document.body.removeChild(area);
   }
 
-  // Island demo: opens on hover / tap, and by itself every few seconds
-  var island = document.getElementById('island');
-  var demo = document.getElementById('demo');
-  var hint = document.getElementById('hint');
-  var auto = true;
-  function setOpen(open) { island.classList.toggle('open', open); hint.style.opacity = open ? 0 : 1; }
-  demo.addEventListener('mouseenter', function () { auto = false; setOpen(true); });
-  demo.addEventListener('mouseleave', function () { setOpen(false); });
-  demo.addEventListener('click', function () { auto = false; setOpen(!island.classList.contains('open')); });
-  setInterval(function () { if (auto) setOpen(!island.classList.contains('open')); }, 2600);
+  // Live island demo: cycles through what DynaIsland shows, like on a real Mac
+  (function () {
+    function ico(paths, filled) {
+      return '<svg width="15" height="15" viewBox="0 0 24 24" fill="' + (filled ? 'currentColor' : 'none') +
+        '" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' + paths + '</svg>';
+    }
+    var I = {
+      moon: ico('<path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9z"/>'),
+      video: ico('<rect x="3" y="6" width="12" height="12" rx="2"/><path d="M15 10l5-3v10l-5-3"/>'),
+      headphones: ico('<path d="M4 15v-3a8 8 0 0 1 16 0v3"/><rect x="3" y="14" width="4" height="6" rx="1.5"/><rect x="17" y="14" width="4" height="6" rx="1.5"/>'),
+      volume: ico('<path d="M5 9v6h4l5 4V5L9 9H5z"/><path d="M17.5 8.5a5 5 0 0 1 0 7"/>'),
+      bolt: ico('<path d="M13 3L5 14h6l-1 7 8-11h-6l1-7z"/>', true),
+      prev: ico('<path d="M18 6l-9 6 9 6V6z"/><path d="M6 6v12"/>', true),
+      pause: ico('<rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/>', true),
+      next: ico('<path d="M6 6l9 6-9 6V6z"/><path d="M18 6v12"/>', true),
+      send: ico('<path d="M3 11l18-8-8 18-2-8-8-2z"/>'),
+      trash: ico('<path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/>')
+    };
+    var EYES = '<i style="left:7px"></i><i style="left:13px"></i>';
+    var MOCI = '<span class="moci">' + EYES + '</span>';
+    var DANCE = '<span class="moci dance">' + EYES + '</span>';
+    var SLEEP = '<span class="moci sleep">' + EYES + '</span><span class="zz">z</span><span class="zz">z</span>';
+    var EQ = '<span class="eq"><b></b><b></b><b></b><b></b></span>';
+    var RING = '<svg class="ring" viewBox="0 0 18 18"><circle cx="9" cy="9" r="7" stroke="#333"/>' +
+      '<circle cx="9" cy="9" r="7" stroke="#ff9f38" stroke-dasharray="44" stroke-dashoffset="6" stroke-linecap="round" transform="rotate(-90 9 9)"/></svg>';
+    function tabs(on) {
+      return '<div class="tabs">' + ['Musik', 'Agenda', 'Sholat', 'Fokus', 'Shelf', 'Clipboard'].map(function (t) {
+        return '<span class="' + (t === on ? 'on' : '') + '">' + t + '</span>';
+      }).join('') + '</div>';
+    }
+    var scenes = [
+      { label: 'Diam', w: 330, left: MOCI, right: '19.51',
+        title: 'Maskot menemani di samping kamera', sub: 'Moci berkedip dan melirik ke arah kursor' },
+      { label: 'Musik', w: 330, left: '<span class="cover"></span>', right: DANCE + EQ,
+        title: 'Musik dari semua app', sub: 'YouTube di browser, Spotify, Apple Music, Podcasts, VLC' },
+      { label: 'Island terbuka', w: 440, h: 182, open: true,
+        body: tabs('Musik') + '<div class="row"><span class="bigcover"></span><div><div class="t1">Judul lagu favoritmu</div>' +
+          '<div class="t2">YouTube · Google Chrome</div></div></div><div class="prog"><b></b></div>' +
+          '<div class="ctl">' + I.prev + I.pause + I.next + '</div>',
+        title: 'Arahkan kursor ke notch', sub: 'Geser dua jari untuk ganti lagu atau atur volume' },
+      { label: 'Jadwal sholat', w: 470, left: '<span class="yellow">' + I.moon + '</span>Maghrib', right: '<span class="yellow" data-count="581"></span>',
+        title: 'Hitung mundur 10 menit sebelum sholat', sub: 'Parameter Kemenag, 25 kota, tanpa internet' },
+      { label: 'Meeting', w: 470, left: '<span class="blue">' + I.video + '</span>Daily standup', right: '<span class="blue" data-count="252"></span>',
+        title: 'Meeting berikutnya dari Calendar', sub: 'Buka island lalu klik Gabung untuk Zoom, Meet, atau Teams' },
+      { label: 'AirPods', w: 470, left: I.headphones + 'AirPods Pro', right: '<span class="green">L 80&nbsp;&nbsp;R 75</span>',
+        title: 'AirPods dan Bluetooth', sub: 'Nama perangkat dan baterainya muncul saat tersambung' },
+      { label: 'Volume', w: 470, left: I.volume + 'Volume', right: '<span class="lvl"><b style="width:62%"></b></span>62%',
+        title: 'Satu pop-up volume yang rapi', sub: 'Menggantikan HUD volume bawaan macOS' },
+      { label: 'Ngecas', w: 470, left: '<span class="green">' + I.bolt + '</span>Mengisi daya', right: '<span class="green">84%</span>',
+        title: 'Charger, baterai lemah, terisi penuh', sub: 'Notifikasi singkat langsung di notch' },
+      { label: 'Shelf', w: 440, h: 182, open: true,
+        body: tabs('Shelf') + '<div class="tiles">' +
+          '<div class="tile"><div class="ic" style="background:#3a1f22;color:#ff6b6b">PDF</div>Proposal.pdf</div>' +
+          '<div class="tile"><div class="ic" style="background:#1f2c3a;color:#5aaeff">PNG</div>Screenshot.png</div>' +
+          '<div class="tile"><div class="ic" style="background:#2c2a1f;color:#ffcc33">ZIP</div>Foto.zip</div></div>' +
+          '<div style="display:flex;gap:8px;justify-content:center;margin-top:10px"><span class="pill">' + I.send + 'AirDrop</span>' +
+          '<span class="pill ghost">' + I.trash + 'Kosongkan</span></div>',
+        title: 'Seret file ke notch', sub: 'Download dan screenshot baru juga langsung masuk Shelf' },
+      { label: 'Clipboard', w: 440, h: 182, open: true,
+        body: tabs('Clipboard') + '<div class="clip"><span>https://meet.google.com/abc-defg-hij</span><span>baru saja</span></div>' +
+          '<div class="clip"><span>Alamat kantor: Jl. Sudirman No. 1, Jakarta</span><span>3 mnt</span></div>' +
+          '<div class="clip"><span>Gambar 1440×900</span><span>12 mnt</span></div>',
+        title: 'Riwayat clipboard', sub: '⌃⌥V, klik, lalu tempel. Password tidak dicatat' },
+      { label: 'Fokus', w: 330, left: RING, right: '<span data-count="1499" data-plain="1"></span>',
+        title: 'Timer fokus', sub: 'Istirahat 5 menit dimulai otomatis' },
+      { label: 'Tidur', w: 330, left: SLEEP, right: '19.51',
+        title: 'Mac didiamkan? Maskotnya tidur', sub: 'Dan kaget saat kamu kembali' }
+    ];
+
+    var stage = document.getElementById('stage'), wrap = document.getElementById('stage-wrap');
+    var island = document.getElementById('island'), left = document.getElementById('ear-l'), right = document.getElementById('ear-r');
+    var body = document.getElementById('body'), caption = document.getElementById('caption'), chips = document.getElementById('chips');
+    var current = -1, timer = null, pausedUntil = 0;
+
+    function fit() {
+      var scale = Math.min(1, wrap.clientWidth / 680);
+      stage.style.transform = 'scale(' + scale + ')';
+      wrap.style.height = (250 * scale) + 'px';
+    }
+    window.addEventListener('resize', fit);
+    fit();
+
+    scenes.forEach(function (scene, i) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.textContent = scene.label;
+      b.addEventListener('click', function () { pausedUntil = Date.now() + 12000; show(i); });
+      chips.appendChild(b);
+    });
+
+    function show(i) {
+      current = i;
+      var scene = scenes[i];
+      [left, right, body, caption].forEach(function (el) { el.classList.add('fade'); });
+      Array.prototype.forEach.call(chips.children, function (b, j) { b.classList.toggle('on', j === i); });
+      setTimeout(function () {
+        left.innerHTML = scene.open ? '' : (scene.left || '');
+        right.innerHTML = scene.open ? '' : (scene.right || '');
+        body.innerHTML = scene.open ? scene.body : '';
+        caption.innerHTML = scene.title + '<small>' + scene.sub + '</small>';
+        island.style.width = scene.w + 'px';
+        island.style.height = (scene.h || 30) + 'px';
+        island.classList.toggle('open', !!scene.open);
+        island.style.borderRadius = scene.open ? '0 0 28px 28px' : '0 0 14px 14px';
+        tick();
+        setTimeout(function () { [left, right, body, caption].forEach(function (el) { el.classList.remove('fade'); }); }, 60);
+      }, 180);
+      clearTimeout(timer);
+      timer = setTimeout(next, scene.open ? 4400 : 3200);
+    }
+    function next() {
+      if (Date.now() < pausedUntil) { timer = setTimeout(next, 1000); return; }
+      show((current + 1) % scenes.length);
+    }
+    function tick() {
+      document.querySelectorAll('[data-count]').forEach(function (el) {
+        var n = Math.max(0, parseInt(el.dataset.count, 10));
+        var text = Math.floor(n / 60) + ':' + ('0' + (n % 60)).slice(-2);
+        el.textContent = el.dataset.plain ? text : '-' + text;
+      });
+    }
+    setInterval(function () {
+      document.querySelectorAll('[data-count]').forEach(function (el) { el.dataset.count = parseInt(el.dataset.count, 10) - 1; });
+      tick();
+    }, 1000);
+    show(0);
+  })();
 </script>
 </body>
 </html>
