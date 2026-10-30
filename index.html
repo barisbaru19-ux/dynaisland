@@ -52,12 +52,17 @@
   .yellow { color: #ffcc33; } .blue { color: #5aaeff; } .green { color: #4cd964; } .dim { color: #9a9aa8; font-weight: 500; }
   .ti { font-size: 15px; }
 
-  .moci { width: 22px; height: 18px; position: relative; flex: none; }
-  .moci::before { content: ""; position: absolute; inset: 2px 1px 0; border-radius: 50%; background: #f4f1ea; }
-  .moci i { position: absolute; bottom: 6px; width: 2.5px; height: 4px; border-radius: 2px; background: #111; z-index: 1; animation: blink 4s infinite; }
-  .moci.dance { animation: dance .45s ease-in-out infinite alternate; transform-origin: 50% 100%; }
-  .moci.sleep i { height: 1.5px; bottom: 7px; animation: none; }
+  .m { display: block; flex: none; overflow: visible; }
+  .m .eye { transform-box: fill-box; transform-origin: center; animation: blink 4.2s infinite; }
+  .m .mb { transform-box: fill-box; transform-origin: 50% 100%; }
+  .m.idle .mb { animation: float 2.4s ease-in-out infinite; }
+  .m.dance .mb { animation: dance .45s ease-in-out infinite alternate; }
+  .m.sleep .mb { animation: breathe 3s ease-in-out infinite; }
+  .m.happy .mb { animation: hop .7s ease-out infinite; }
   .zz { font-size: 11px; color: #ccc; animation: zz 2s infinite; } .zz + .zz { animation-delay: .7s; }
+  .mascots { display: flex; justify-content: center; gap: 34px; margin-top: 4px; }
+  .mascots div { text-align: center; font-size: 12px; color: #ccc; font-weight: 600; }
+  .mascots .m { margin: 0 auto 6px; }
   .cover { width: 20px; height: 20px; border-radius: 5px; background: linear-gradient(135deg, #ff6b4a, #ffb547); flex: none; }
   .eq { display: flex; gap: 2.5px; align-items: center; height: 14px; }
   .eq b { width: 3px; border-radius: 2px; background: linear-gradient(#ff8fb8, #5de0b5); animation: eq .5s ease-in-out infinite alternate; }
@@ -88,6 +93,9 @@
   .chips button.on { background: var(--accent); border-color: var(--accent); color: #0d0f1c; font-weight: 700; }
   @keyframes eq { from { height: 4px } to { height: 14px } }
   @keyframes dance { from { transform: translateY(1px) rotate(-8deg) } to { transform: translateY(-2px) rotate(8deg) } }
+  @keyframes float { 50% { transform: translateY(-1px) } }
+  @keyframes breathe { 50% { transform: scale(1.05, .95) } }
+  @keyframes hop { 0%, 100% { transform: translateY(0) } 35% { transform: translateY(-4px) scale(.96, 1.04) } 65% { transform: translateY(0) scale(1.05, .95) } }
   @keyframes zz { 0% { opacity: 0; transform: translateY(3px) } 50% { opacity: 1 } 100% { opacity: 0; transform: translateY(-5px) } }
   @keyframes blink { 0%, 92%, 100% { transform: scaleY(1) } 95% { transform: scaleY(.1) } }
 
@@ -270,10 +278,60 @@
       send: ico('<path d="M3 11l18-8-8 18-2-8-8-2z"/>'),
       trash: ico('<path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/>')
     };
-    var EYES = '<i style="left:7px"></i><i style="left:13px"></i>';
-    var MOCI = '<span class="moci">' + EYES + '</span>';
-    var DANCE = '<span class="moci dance">' + EYES + '</span>';
-    var SLEEP = '<span class="moci sleep">' + EYES + '</span><span class="zz">z</span><span class="zz">z</span>';
+    // Same shapes as the app (Sources/Mascot.swift), in a 40 × 36 box.
+    function svg(cls, size, inner) {
+      return '<svg class="m ' + cls + '" width="' + Math.round(size * 1.25) + '" height="' + Math.round(size * 1.125) +
+        '" viewBox="0 0 40 36"><g class="mb">' + inner + '</g></svg>';
+    }
+    function eyes(kind, mood) {
+      var y = kind === 'kucing' ? 22 : 22.5, ry = kind === 'kucing' ? 2.5 : 2.4, rx = kind === 'kucing' ? 1.7 : 1.8;
+      if (mood === 'sleep') {
+        return '<path d="M9.3 ' + y + ' Q11.5 ' + (y + 1.6) + ' 13.7 ' + y + 'M18.3 ' + y + ' Q20.5 ' + (y + 1.6) + ' 22.7 ' + y +
+          '" stroke="#1a1a1a" stroke-width=".9" fill="none" stroke-linecap="round"/>';
+      }
+      if (mood === 'happy') {
+        return '<path d="M9.3 ' + (y + .8) + ' Q11.5 ' + (y - 1.8) + ' 13.7 ' + (y + .8) + 'M18.3 ' + (y + .8) + ' Q20.5 ' + (y - 1.8) + ' 22.7 ' + (y + .8) +
+          '" stroke="#1a1a1a" stroke-width=".9" fill="none" stroke-linecap="round"/>';
+      }
+      return '<ellipse class="eye" cx="11.5" cy="' + y + '" rx="' + rx + '" ry="' + ry + '" fill="#1a1a1a"/>' +
+        '<ellipse class="eye" cx="20.5" cy="' + y + '" rx="' + rx + '" ry="' + ry + '" fill="#1a1a1a"/>' +
+        '<circle cx="12.2" cy="' + (y - 1.3) + '" r=".6" fill="#fff"/><circle cx="21.2" cy="' + (y - 1.3) + '" r=".6" fill="#fff"/>';
+    }
+    function moci(mood, size) {
+      var mouth = mood === 'sleep' ? '<path d="M14.8 27.2 H17.2" stroke="#1a1a1a" stroke-width=".9" stroke-linecap="round"/>'
+        : mood === 'happy' || mood === 'dance' ? '<path d="M14 26.3 Q16 30 18 26.3 Z" fill="#4A1B0C"/>'
+        : '<path d="M14.5 26.6 Q16 28.2 17.5 26.6" stroke="#1a1a1a" stroke-width=".9" fill="none" stroke-linecap="round"/>';
+      return svg(mood, size || 23,
+        '<ellipse cx="16" cy="24" rx="13" ry="10.5" fill="#F4F1EA"/>' +
+        '<ellipse cx="10" cy="17" rx="3" ry="1.5" fill="#fff" opacity=".85"/>' +
+        '<ellipse cx="8" cy="26.5" rx="2" ry="1.2" fill="#ED93B1" opacity=".85"/><ellipse cx="24" cy="26.5" rx="2" ry="1.2" fill="#ED93B1" opacity=".85"/>' +
+        eyes('moci', mood === 'dance' ? 'happy' : mood) + mouth);
+    }
+    function kucing(mood, size) {
+      return svg(mood, size || 23,
+        '<path d="M5 18L8 7L14 13Z M27 18L24 7L18 13Z" fill="#EF9F27"/>' +
+        '<path d="M7.5 14L8.6 9.5L11.5 12.5Z M24.5 14L23.4 9.5L20.5 12.5Z" fill="#F0997B"/>' +
+        '<ellipse cx="16" cy="23" rx="12" ry="10.5" fill="#EF9F27"/>' +
+        '<path d="M14 14v2.6 M16 13.4v2.6 M18 14v2.6" stroke="#BA7517" stroke-width=".9" stroke-linecap="round"/>' +
+        '<path d="M2.5 24L8.5 24.8 M2.5 27.2L8.5 26.4 M29.5 24L23.5 24.8 M29.5 27.2L23.5 26.4" stroke="#FAC775" stroke-width=".7" stroke-linecap="round"/>' +
+        eyes('kucing', mood) +
+        '<path d="M15 25H17L16 26.2Z" fill="#D4537E"/>' +
+        '<path d="M16 26.2 Q15.6 27.7 14.2 27.1 M16 26.2 Q16.4 27.7 17.8 27.1" stroke="#1a1a1a" stroke-width=".8" fill="none" stroke-linecap="round"/>');
+    }
+    function bit(mood, size) {
+      function px(x, y, w, h, c) { return '<rect x="' + x + '" y="' + y + '" width="' + w + '" height="' + h + '" fill="' + c + '"/>'; }
+      var face = mood === 'sleep'
+        ? px(10, 20, 3, 1, '#1a1a1a') + px(19, 20, 3, 1, '#1a1a1a')
+        : '<rect class="eye" x="10" y="17" width="3" height="5" fill="#1a1a1a"/><rect class="eye" x="19" y="17" width="3" height="5" fill="#1a1a1a"/>';
+      return svg(mood, size || 23,
+        px(15, 7, 2, 5, '#97C459') + px(13, 5, 6, 3, mood === 'sleep' ? '#639922' : '#C0DD97') +
+        px(4, 17, 2, 7, '#639922') + px(26, 17, 2, 7, '#639922') + px(6, 12, 20, 17, '#97C459') +
+        px(8, 29, 5, 4, '#639922') + px(19, 29, 5, 4, '#639922') + face +
+        px(12, 24, 1, 1, '#3B6D11') + px(13, 25, 6, 1, '#3B6D11') + px(19, 24, 1, 1, '#3B6D11'));
+    }
+    var MOCI = moci('idle');
+    var DANCE = moci('dance');
+    var SLEEP = moci('sleep') + '<span class="zz">z</span><span class="zz">z</span>';
     var EQ = '<span class="eq"><b></b><b></b><b></b><b></b></span>';
     var RING = '<svg class="ring" viewBox="0 0 18 18"><circle cx="9" cy="9" r="7" stroke="#333"/>' +
       '<circle cx="9" cy="9" r="7" stroke="#ff9f38" stroke-dasharray="44" stroke-dashoffset="6" stroke-linecap="round" transform="rotate(-90 9 9)"/></svg>';
@@ -292,6 +350,10 @@
           '<div class="t2">YouTube · Google Chrome</div></div></div><div class="prog"><b></b></div>' +
           '<div class="ctl">' + I.prev + I.pause + I.next + '</div>',
         title: 'Arahkan kursor ke notch', sub: 'Geser dua jari untuk ganti lagu atau atur volume' },
+      { label: 'Maskot', w: 440, h: 182, open: true,
+        body: tabs('') + '<div class="mascots"><div>' + moci('happy', 46) + 'Moci</div><div>' + kucing('idle', 46) +
+          'Kucing</div><div>' + bit('idle', 46) + 'Bit</div></div>',
+        title: 'Pilih maskotmu', sub: 'Berjoget saat musik, tidur saat Mac didiamkan, menyapa saat island dibuka' },
       { label: 'Jadwal sholat', w: 470, left: '<span class="yellow">' + I.moon + '</span>Maghrib', right: '<span class="yellow" data-count="581"></span>',
         title: 'Hitung mundur 10 menit sebelum sholat', sub: 'Parameter Kemenag, 25 kota, tanpa internet' },
       { label: 'Meeting', w: 470, left: '<span class="blue">' + I.video + '</span>Daily standup', right: '<span class="blue" data-count="252"></span>',
