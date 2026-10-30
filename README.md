@@ -41,7 +41,7 @@ Notch dideteksi otomatis.
 | Timer fokus berjalan | Ring progres di kiri kamera, sisa waktu di kanan |
 | Seret file ke notch | Island terbuka di tab Shelf, file disimpan di sana |
 | 10 menit sebelum meeting | Judul meeting di kiri kamera, hitung mundur di kanan, bunyi saat mulai |
-| Download selesai / ambil screenshot | Notifikasi singkat, file langsung masuk Shelf |
+| Download selesai / ambil screenshot | Notifikasi singkat, file langsung masuk Shelf (juga screenshot dari Lightshot dll.) |
 | Kursor diarahkan ke notch | Island terbuka dengan tab **Musik · Agenda · Sholat · Fokus · Shelf · Clipboard** |
 
 ### Maskot
@@ -149,6 +149,9 @@ Gatekeeper tidak memblokir DynaIsland itu sendiri.
   (untuk screenshot). Klik **Allow / OK**. Seperti izin Automation, izin ini bisa ditanyakan lagi
   setelah build ulang. Kalau tidak sengaja ditolak: System Settings → Privacy & Security →
   Calendars / Files and Folders.
+- Screenshot dari app lain (Lightshot, CleanShot, dll.): tekan **Copy** (⌘C) di app itu, dan gambarnya
+  disimpan ke `Pictures/DynaIsland` lalu masuk Shelf. Kalau di-**Save**, simpan ke Desktop atau Downloads
+  supaya ikut terdeteksi. Gambar baru yang disimpan ke Desktop juga ikut masuk Shelf.
 - Download dianggap selesai kalau ukurannya tidak berubah selama 2 detik, jadi baru muncul
   beberapa detik setelah browser selesai. Yang dipantau hanya file baru, bukan isi lama folder.
 - Agar tetap terlihat saat pindah desktop, app memakai fungsi tersembunyi macOS (sama seperti

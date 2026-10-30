@@ -52,7 +52,34 @@ final class ClipboardMonitor {
             model.recordClip(.text(text))
         } else if let image = NSImage(pasteboard: pasteboard) {
             model.recordClip(.image(image))
+            // A picture with nothing else attached (no text, link or web page) is a screenshot
+            // copied by Lightshot, CleanShot, ⌃⇧⌘4…: save it so it can be dragged from the shelf.
+            let onlyImage = !types.contains(.html) && !types.contains(.URL) && !types.contains(.rtf)
+            if onlyImage && model.autoShelfEnabled, let png = pngData() {
+                saveScreenshot(png)
+            }
         }
+    }
+
+    private func pngData() -> Data? {
+        if let png = pasteboard.data(forType: .png) { return png }
+        guard let tiff = pasteboard.data(forType: .tiff),
+              let bitmap = NSBitmapImageRep(data: tiff) else { return nil }
+        return bitmap.representation(using: .png, properties: [:])
+    }
+
+    /// Saves to Pictures/DynaIsland and puts the file on the shelf.
+    private func saveScreenshot(_ png: Data) {
+        let fm = FileManager.default
+        let folder = fm.homeDirectoryForCurrentUser.appendingPathComponent("Pictures/DynaIsland", isDirectory: true)
+        try? fm.createDirectory(at: folder, withIntermediateDirectories: true)
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd 'pukul' HH.mm.ss"
+        let url = folder.appendingPathComponent("Screenshot \(formatter.string(from: Date())).png")
+        guard (try? png.write(to: url)) != nil else { return }
+        model.addToShelf([url])
+        model.show(IslandNotice(symbol: "camera.viewfinder", title: "Screenshot", detail: "Shelf", tint: .white),
+                   seconds: 2.2)
     }
 }
 
@@ -426,7 +453,8 @@ final class FolderWatcher {
         return FolderSnapshot(folder: folder, entries: entries)
     }
 
-    /// macOS tags screenshots and screen recordings with this extended attribute.
+    /// Screenshots from macOS (tagged with an extended attribute) and from other apps
+    /// such as Lightshot (any new picture saved to the screenshot folder).
     nonisolated private static func isScreenCapture(_ url: URL) -> Bool {
         let tagged = url.withUnsafeFileSystemRepresentation { path -> Bool in
             guard let path = path else { return false }
@@ -436,6 +464,8 @@ final class FolderWatcher {
         // Fallback: the usual file names (English / Indonesian macOS).
         let name = url.lastPathComponent.lowercased()
         let prefixes = ["screenshot", "screen shot", "screen recording", "cuplikan layar", "tangkapan layar", "rekaman layar"]
-        return prefixes.contains { name.hasPrefix($0) }
+        if prefixes.contains(where: { name.hasPrefix($0) }) { return true }
+        let pictures: Set<String> = ["png", "jpg", "jpeg", "heic", "gif", "tiff", "webp", "bmp"]
+        return pictures.contains(url.pathExtension.lowercased())
     }
 }
