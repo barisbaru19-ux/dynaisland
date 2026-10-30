@@ -8,6 +8,8 @@
     <string>DynaIsland</string>
     <key>CFBundleIdentifier</key>
     <string>local.dynaisland.app</string>
+    <key>CFBundleIconFile</key>
+    <string>AppIcon</string>
     <key>CFBundleExecutable</key>
     <string>DynaIsland</string>
     <key>CFBundlePackageType</key>

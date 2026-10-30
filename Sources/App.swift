@@ -44,9 +44,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func buildStatusItem() {
         let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
         if let button = item.button {
-            let image = NSImage(systemSymbolName: "capsule.fill", accessibilityDescription: "DynaIsland")
-            image?.isTemplate = true
-            button.image = image
+            button.image = AppDelegate.menuBarIcon()
+            button.toolTip = "DynaIsland"
         }
 
         let menu = NSMenu()
@@ -159,6 +158,27 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         item.menu = menu
         statusItem = item
+    }
+
+    /// The logo as a menu bar icon: an island with Moci on the left and an equalizer on the right,
+    /// cut out of the shape. A template image, so it follows light / dark menu bars.
+    private static func menuBarIcon() -> NSImage {
+        let image = NSImage(size: NSSize(width: 20, height: 14), flipped: false) { _ in
+            NSColor.black.setFill()
+            NSBezierPath(roundedRect: NSRect(x: 1, y: 3.25, width: 18, height: 7.5), xRadius: 3.75, yRadius: 3.75).fill()
+            NSGraphicsContext.current?.compositingOperation = .destinationOut
+            NSBezierPath(ovalIn: NSRect(x: 3.2, y: 4.9, width: 4.2, height: 4.2)).fill()
+            let heights: [CGFloat] = [2.4, 4.0, 3.0]
+            for (index, height) in heights.enumerated() {
+                let x = 11.6 + CGFloat(index) * 1.9
+                NSBezierPath(roundedRect: NSRect(x: x, y: 7 - height / 2, width: 1.1, height: height),
+                             xRadius: 0.55, yRadius: 0.55).fill()
+            }
+            return true
+        }
+        image.isTemplate = true
+        image.accessibilityDescription = "DynaIsland"
+        return image
     }
 
     @objc private func toggleHideWhenIdle(_ sender: NSMenuItem) {

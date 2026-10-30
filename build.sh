@@ -49,6 +49,20 @@ else
 fi
 
 cp Info.plist "${APP}/Contents/Info.plist"
+
+# Ikon app: Resources/AppIcon.png (1024 px) → AppIcon.icns
+make_icon() {
+  [[ -f Resources/AppIcon.png ]] || return 0
+  local ICONSET="build/obj/AppIcon.iconset"
+  rm -rf "${ICONSET}"
+  mkdir -p "${ICONSET}"
+  for SIZE in 16 32 128 256 512; do
+    sips -z "${SIZE}" "${SIZE}" Resources/AppIcon.png --out "${ICONSET}/icon_${SIZE}x${SIZE}.png" >/dev/null
+    sips -z "$((SIZE * 2))" "$((SIZE * 2))" Resources/AppIcon.png --out "${ICONSET}/icon_${SIZE}x${SIZE}@2x.png" >/dev/null
+  done
+  iconutil -c icns "${ICONSET}" -o "${APP}/Contents/Resources/AppIcon.icns"
+}
+make_icon || echo "⚠️  Ikon app dilewati"
 if [[ -n "${BUILD_NUMBER:-}" ]]; then
   plutil -replace CFBundleVersion -string "${BUILD_NUMBER}" "${APP}/Contents/Info.plist"
   plutil -replace CFBundleShortVersionString -string "1.${BUILD_NUMBER}" "${APP}/Contents/Info.plist"

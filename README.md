@@ -1,3 +1,5 @@
+<p align="center"><img src="Resources/AppIcon.png" width="160" alt="Logo DynaIsland"></p>
+
 # DynaIsland
 
 "Dynamic Island" ala iPhone untuk MacBook: musik, maskot, jadwal sholat, meeting, timer fokus,
@@ -200,6 +202,7 @@ Sources/
   DailyViews.swift        tab Agenda & Clipboard + tampilan meeting di notch
   Updater.swift           cek versi baru di GitHub + pasang update tanpa Terminal
   MediaKeys.swift         tombol volume ditangani sendiri, supaya HUD macOS tidak ikut muncul
+Resources/AppIcon.svg     logo (sumber); AppIcon.png dipakai build.sh untuk ikon app
 install.sh                pemasang satu baris (curl)
 .github/workflows/        build otomatis di Mac milik GitHub, hasilnya di Releases
 ```
