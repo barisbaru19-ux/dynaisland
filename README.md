@@ -7,6 +7,8 @@ shelf file + AirDrop, dan riwayat clipboard, semuanya di sekitar notch kamera.
 
 ## Pasang dengan satu baris
 
+Halaman download: **https://barisbaru19-ux.github.io/dynaisland/**
+
 Buka **Terminal** (⌘ + Space, ketik "Terminal"), paste baris ini, lalu tekan Enter:
 
 ```bash
@@ -135,7 +137,19 @@ memandu memilih maskot dan memberi izin satu per satu.
   untuk mengizinkan.
 - **Umum**: buka otomatis saat Mac menyala (macOS 13+), perbarui, coba animasi, keluar.
 
-Menu bar sendiri hanya berisi **Pengaturan…**, **Perbarui DynaIsland…**, dan **Keluar**.
+Menu bar sendiri berisi **Pengaturan…**, **Perbarui DynaIsland…**, **Laporkan masalah…**, dan **Keluar**.
+
+### Pintasan keyboard
+
+| Pintasan | Fungsi |
+|---|---|
+| ⌃⌥ Space | Buka / tutup island |
+| ⌃⌥ V | Riwayat clipboard: klik salah satu, island menutup, lalu tempel dengan ⌘V |
+
+### Update otomatis
+
+Versi baru dipasang sendiri saat Mac tidak dipakai 10 menit (tidak ada musik, timer fokus, atau meeting).
+Bisa dimatikan di Pengaturan → Umum. Setelah update, jendela **Yang baru** menjelaskan apa yang berubah.
 
 ## Batasan yang perlu diketahui
 
@@ -211,6 +225,9 @@ Sources/
   BluetoothMonitor.swift  pop-up AirPods / perangkat Bluetooth
   SystemNowPlaying.swift  musik dari semua app (mediaremote-adapter lewat /usr/bin/perl)
   SettingsViews.swift     jendela Pengaturan + layar sambutan
+  SupportViews.swift      "Yang baru", laporkan masalah (info teknis tanpa data pribadi)
+  HotKeys.swift           pintasan keyboard global (tanpa izin)
+docs/                     halaman download (GitHub Pages)
 sign-local.sh             tanda tangan per Mac supaya izin tidak hilang saat update
 Resources/AppIcon.svg     logo (sumber); AppIcon.png dipakai build.sh untuk ikon app
 install.sh                pemasang satu baris (curl)

@@ -1,6 +1,8 @@
 #!/bin/bash
 # Pasang atau perbarui DynaIsland dengan satu baris di Terminal:
 #   curl -fsSL https://raw.githubusercontent.com/barisbaru19-ux/dynaisland/main/install.sh | bash
+# Menghapus:
+#   curl -fsSL https://raw.githubusercontent.com/barisbaru19-ux/dynaisland/main/install.sh | bash -s -- --uninstall
 #
 # Mengunduh app siap pakai dari GitHub Releases (tidak perlu Xcode / Command Line Tools).
 # Kalau belum ada, build dari kode sumber (butuh Command Line Tools).
@@ -12,6 +14,18 @@ DEST="/Applications/${APP_NAME}.app"
 RELEASE_URL="https://github.com/${REPO}/releases/latest/download/${APP_NAME}-app.zip"
 SOURCE_URL="https://codeload.github.com/${REPO}/tar.gz/refs/heads/main"
 SIGN_URL="https://raw.githubusercontent.com/${REPO}/main/sign-local.sh"
+
+if [[ "${1:-}" == "--uninstall" ]]; then
+  echo "Menghapus DynaIsland..."
+  pkill -x "${APP_NAME}" 2>/dev/null || true
+  sleep 0.5
+  rm -rf "${DEST}"
+  defaults delete local.dynaisland.app >/dev/null 2>&1 || true
+  tccutil reset All local.dynaisland.app >/dev/null 2>&1 || true
+  security delete-keychain "${HOME}/Library/Keychains/dynaisland-signing.keychain-db" >/dev/null 2>&1 || true
+  echo "Selesai. DynaIsland sudah dihapus dari Mac ini."
+  exit 0
+fi
 
 echo ""
 echo "  DynaIsland — memasang..."

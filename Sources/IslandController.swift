@@ -50,6 +50,9 @@ final class IslandController: NSObject {
     private var swipeX: CGFloat = 0
     private var swipeY: CGFloat = 0
     private var swipeDone = false
+    // Opened with a keyboard shortcut: stays open until the pointer visits and leaves, or 6 s pass.
+    private var keyboardOpenedAt: Date?
+    private var pointerVisited = false
 
     init(model: IslandModel) {
         self.model = model
@@ -89,6 +92,11 @@ final class IslandController: NSObject {
         self.secondTimer = secondTimer
         secondTick()
 
+        NotificationCenter.default.addObserver(self, selector: #selector(hotKeyPressed(_:)),
+                                               name: .dynaHotKey, object: nil)
+        model.requestClose = { [weak self] in self?.setHovered(false) }
+        if model.hotKeysEnabled { HotKeys.register() }
+
         NotificationCenter.default.addObserver(self,
                                                selector: #selector(screensChanged),
                                                name: NSApplication.didChangeScreenParametersNotification,
@@ -122,7 +130,9 @@ final class IslandController: NSObject {
         calendar.tick()
         folders.tick()
         updateMediaKeys()
-        model.setAsleep(Self.secondsSinceLastInput() > 120)   // mascot naps after 2 minutes
+        let idle = Self.secondsSinceLastInput()
+        model.setAsleep(idle > 120)   // mascot naps after 2 minutes
+        model.updater?.considerAutoUpdate(idleSeconds: idle)
     }
 
     /// Volume keys: handled by DynaIsland (no macOS HUD) only in "island" mode and with permission.
@@ -229,7 +239,17 @@ final class IslandController: NSObject {
 
         if model.isHovered {
             let zone = islandRect(size: model.layout.size(for: model.mode), in: frame).insetBy(dx: -14, dy: -14)
-            if zone.contains(mouse) || cameraRect(in: frame)?.contains(mouse) == true {
+            let inside = zone.contains(mouse) || cameraRect(in: frame)?.contains(mouse) == true
+            if let opened = keyboardOpenedAt, !pointerVisited {
+                // Opened from the keyboard: wait for the pointer, close after 6 s if it never comes.
+                if inside {
+                    pointerVisited = true
+                } else if now.timeIntervalSince(opened) > 6 {
+                    setHovered(false)
+                }
+                return
+            }
+            if inside {
                 exitSince = nil
             } else if let since = exitSince {
                 if now.timeIntervalSince(since) > 0.2 { setHovered(false) }
@@ -330,9 +350,39 @@ final class IslandController: NSObject {
                       height: camera.height + 14)
     }
 
+    // MARK: - Keyboard shortcuts
+
+    @objc private func hotKeyPressed(_ note: Notification) {
+        guard model.hotKeysEnabled,
+              let raw = note.userInfo?["id"] as? UInt32, let key = HotKey(rawValue: raw) else { return }
+        switch key {
+        case .openIsland:
+            if model.isHovered { setHovered(false) } else { openFromKeyboard(tab: nil) }
+        case .clipboard:
+            if model.isHovered && model.openTab == .clipboard { setHovered(false) } else { openFromKeyboard(tab: .clipboard) }
+        }
+    }
+
+    private func openFromKeyboard(tab: IslandTab?) {
+        setHovered(true)
+        if let tab = tab { model.openTab = tab }
+        keyboardOpenedAt = Date()
+        pointerVisited = false
+        model.openedFromKeyboard = true
+    }
+
+    /// Called after toggling the shortcuts in Settings.
+    func updateHotKeys() {
+        if model.hotKeysEnabled { HotKeys.register() } else { HotKeys.unregister() }
+    }
+
     private func setHovered(_ hovered: Bool, forDrop: Bool = false) {
         enterSince = nil
         exitSince = nil
+        if !hovered {
+            keyboardOpenedAt = nil
+            model.openedFromKeyboard = false
+        }
         if hovered { model.prepareToOpen(forDrop: forDrop) }
         model.isHovered = hovered
         panel.ignoresMouseEvents = !hovered

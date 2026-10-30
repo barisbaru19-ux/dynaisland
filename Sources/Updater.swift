@@ -75,7 +75,7 @@ final class Updater {
 
     // MARK: Checking GitHub
 
-    /// Looks for a newer build 10 seconds after launch, then every 6 hours.
+    /// Looks for a newer build 10 seconds after launch, then every 2 hours.
     func startChecking() {
         checkTask?.cancel()
         checkTask = Task { [weak self] in
@@ -83,7 +83,7 @@ final class Updater {
             while !Task.isCancelled {
                 guard let updater = self else { return }
                 await updater.checkForUpdate()
-                try? await Task.sleep(nanoseconds: 6 * 3_600 * 1_000_000_000)
+                try? await Task.sleep(nanoseconds: 2 * 3_600 * 1_000_000_000)
             }
         }
     }
@@ -102,6 +102,23 @@ final class Updater {
             model.show(IslandNotice(symbol: "arrow.down.app.fill", title: "Versi baru tersedia",
                                     detail: "1.\(latest)", tint: .green), seconds: 5)
         }
+    }
+
+    // MARK: Automatic updates
+
+    private var lastAutoAttempt = Date.distantPast
+
+    /// Called once a second. Installs a newer build by itself only when nobody would notice:
+    /// no input for 10 minutes, no music, no focus timer, no meeting, island closed.
+    func considerAutoUpdate(idleSeconds: Double) {
+        guard model.autoUpdateEnabled, !model.isUpdating, process == nil,
+              let latest = model.latestBuild, latest > Updater.currentBuild,
+              idleSeconds > 600,
+              model.track?.isPlaying != true, model.focus == nil,
+              model.meetingAlert == nil, !model.isHovered,
+              Date().timeIntervalSince(lastAutoAttempt) > 6 * 3600 else { return }
+        lastAutoAttempt = Date()
+        installOnline()
     }
 
     // MARK: Installing

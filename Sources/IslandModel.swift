@@ -371,6 +371,19 @@ final class IslandModel: ObservableObject {
     @Published var volumeFlash: Double?
     private var volumeFlashTask: Task<Void, Never>?
 
+    // Keyboard shortcuts
+    @Published var hotKeysEnabled: Bool = (UserDefaults.standard.object(forKey: "hotKeysEnabled") as? Bool) ?? true {
+        didSet { UserDefaults.standard.set(hotKeysEnabled, forKey: "hotKeysEnabled") }
+    }
+    /// The island was opened with a shortcut (e.g. to pick a clip, then paste).
+    var openedFromKeyboard = false
+    var requestClose: (() -> Void)?
+
+    // Updates
+    @Published var autoUpdateEnabled: Bool = (UserDefaults.standard.object(forKey: "autoUpdateEnabled") as? Bool) ?? true {
+        didSet { UserDefaults.standard.set(autoUpdateEnabled, forKey: "autoUpdateEnabled") }
+    }
+
     // Volume pop-up: the island's, macOS's, or both
     @Published var volumeHUDMode: VolumeHUDMode = VolumeHUDMode(rawValue: UserDefaults.standard.string(forKey: "volumeHUDMode") ?? "") ?? .island {
         didSet { UserDefaults.standard.set(volumeHUDMode.rawValue, forKey: "volumeHUDMode") }
@@ -648,6 +661,13 @@ final class IslandModel: ObservableObject {
             clips.insert(moved, at: 0)
         }
         copiedClipID = item.id
+        if openedFromKeyboard {
+            // ⌃⌥V → click a clip → the island gets out of the way so you can paste right away.
+            Task { [weak self] in
+                try? await Task.sleep(nanoseconds: 350_000_000)
+                self?.requestClose?()
+            }
+        }
         copiedTask?.cancel()
         copiedTask = Task { [weak self] in
             try? await Task.sleep(nanoseconds: 1_500_000_000)

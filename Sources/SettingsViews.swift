@@ -129,6 +129,17 @@ struct FeatureSettings: View {
                         Toggle("Download & screenshot otomatis ke Shelf", isOn: $model.autoShelfEnabled)
                         Toggle("Gestur di tab Musik: geser untuk ganti lagu, scroll untuk volume",
                                isOn: $model.gesturesEnabled)
+                        Toggle("Pintasan keyboard: ⌃⌥ Space buka island, ⌃⌥ V riwayat clipboard", isOn: Binding(
+                            get: { model.hotKeysEnabled },
+                            set: { value in
+                                model.hotKeysEnabled = value
+                                DynaIslandApp.delegate.hotKeysSettingChanged()
+                            }))
+                        if model.hotKeysEnabled && !HotKeys.taken.isEmpty {
+                            Text("Dipakai app lain: \(HotKeys.taken.map { $0.label }.joined(separator: ", "))")
+                                .font(.caption)
+                                .foregroundColor(.orange)
+                        }
                     }
                     .padding(8)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -178,8 +189,13 @@ struct GeneralSettings: View {
                                 .foregroundColor(.green)
                         }
                     }
+                    Toggle("Perbarui otomatis saat Mac tidak dipakai", isOn: $model.autoUpdateEnabled)
                     HStack(spacing: 10) {
-                        Button("Perbarui…") { DynaIslandApp.delegate.installUpdate() }
+                        Button("Perbarui sekarang…") { DynaIslandApp.delegate.installUpdate() }
+                        Button("Yang baru") { DynaIslandApp.delegate.showWhatsNew() }
+                        Button("Laporkan masalah…") { DynaIslandApp.delegate.showReport() }
+                    }
+                    HStack(spacing: 10) {
                         Button("Coba animasi") { DynaIslandApp.delegate.runDemo() }
                         Button("Lihat semua gerakan maskot") { model.demoMascot() }
                     }

@@ -26,6 +26,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var statusItem: NSStatusItem?
     private var settingsWindow: NSWindow?
     private var onboardingWindow: NSWindow?
+    private var whatsNewWindow: NSWindow?
+    private var reportWindow: NSWindow?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         let model = IslandModel()
@@ -51,6 +53,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         if model.onboarded {
             startPermissionedFeatures()
+            if WhatsNew.hasUnseen { showWhatsNew() }
         } else {
             showOnboarding()
         }
@@ -125,10 +128,38 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         guard let model = model else { return }
         let firstTime = !model.onboarded
         model.onboarded = true
+        WhatsNew.markSeen()   // new users have just seen everything
         onboardingWindow?.close()
         onboardingWindow = nil
         if firstTime { startPermissionedFeatures() }
         model.react(.happy, seconds: 3)
+    }
+
+    func showWhatsNew() {
+        if whatsNewWindow == nil {
+            let view = WhatsNewView { [weak self] in
+                WhatsNew.markSeen()
+                self?.whatsNewWindow?.close()
+                self?.whatsNewWindow = nil
+            }
+            whatsNewWindow = AppDelegate.makeWindow(title: "Yang baru di DynaIsland", content: view,
+                                                    size: NSSize(width: 480, height: 520))
+        }
+        bringToFront(whatsNewWindow)
+    }
+
+    @objc func showReport() {
+        guard let model = model else { return }
+        // A fresh report every time, so it reflects the current state.
+        reportWindow?.close()
+        reportWindow = AppDelegate.makeWindow(title: "Laporkan masalah",
+                                              content: ReportView(report: Diagnostics.report(model: model)),
+                                              size: NSSize(width: 580, height: 560))
+        bringToFront(reportWindow)
+    }
+
+    func hotKeysSettingChanged() {
+        controller?.updateHotKeys()
     }
 
     private func bringToFront(_ window: NSWindow?) {
@@ -170,6 +201,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let update = NSMenuItem(title: "Perbarui DynaIsland…", action: #selector(installUpdate), keyEquivalent: "")
         update.target = self
         menu.addItem(update)
+
+        let report = NSMenuItem(title: "Laporkan masalah…", action: #selector(showReport), keyEquivalent: "")
+        report.target = self
+        menu.addItem(report)
+
+        menu.addItem(.separator())
+        for key in HotKey.allCases {
+            let shortcut = NSMenuItem(title: "\(key.title)   \(key.label)", action: nil, keyEquivalent: "")
+            shortcut.isEnabled = false
+            menu.addItem(shortcut)
+        }
 
         menu.addItem(.separator())
 
