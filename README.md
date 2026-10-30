@@ -14,7 +14,7 @@ curl -fsSL https://raw.githubusercontent.com/barisbaru19-ux/dynaisland/main/inst
 ```
 
 Selesai dalam beberapa detik. Tidak perlu Xcode, tidak ada peringatan "damaged".
-Untuk memperbarui nanti: klik ikon kapsul di menu bar → **Perbarui DynaIsland…**
+Untuk memperbarui nanti: klik ikon DynaIsland di menu bar → **Perbarui DynaIsland…**
 (app juga memberi tahu kalau ada versi baru). Butuh macOS 12 atau lebih baru, Apple Silicon atau Intel.
 
 ---
@@ -44,12 +44,14 @@ Notch dideteksi otomatis.
 | Seret file ke notch | Island terbuka di tab Shelf, file disimpan di sana |
 | 10 menit sebelum meeting | Judul meeting di kiri kamera, hitung mundur di kanan, bunyi saat mulai |
 | Download selesai / ambil screenshot | Notifikasi singkat, file langsung masuk Shelf (juga screenshot dari Lightshot dll.) |
+| AirPods / perangkat Bluetooth tersambung | Nama perangkat dan baterainya (kiri/kanan untuk AirPods) |
+| Geser dua jari di tab Musik | Kiri/kanan ganti lagu, atas/bawah atur volume |
 | Kursor diarahkan ke notch | Island terbuka dengan tab **Musik · Agenda · Sholat · Fokus · Shelf · Clipboard** |
 
 ### Maskot
 
 Tiga maskot yang digambar langsung dengan kode: **Moci** (bola putih empuk), **Kucing** (oranye),
-dan **Bit** (robot pixel). Ganti lewat ikon kapsul → **Maskot**, atau pilih **Tanpa maskot** untuk
+dan **Bit** (robot pixel). Ganti lewat ikon DynaIsland → **Maskot**, atau pilih **Tanpa maskot** untuk
 kembali menampilkan baterai di kiri kamera.
 
 | Kejadian | Maskot |
@@ -120,21 +122,20 @@ Lebih suka Terminal? Dari folder `DynaIsland`: `./build.sh --install`.
 Tidak perlu Xcode penuh, tidak perlu akun developer. Karena app-nya di-build sendiri di Mac kamu,
 Gatekeeper tidak memblokir DynaIsland itu sendiri.
 
-## Menu (ikon kapsul di menu bar)
+## Pengaturan
 
-- **Sembunyikan saat idle**: pil hilang kalau tidak ada musik atau notifikasi, tapi hover di tengah atas tetap memunculkannya.
-- **Gaya pil (di bawah kamera)**: khusus Mac ber-notch. Island jadi pil yang melayang di bawah kamera.
-- **Maskot**: pilih Moci, Kucing, Bit, atau Tanpa maskot.
-- **Pop-up volume**: hanya di island (bawaan), hanya HUD macOS, atau keduanya.
-- **Pengingat meeting (Kalender)**, **Riwayat clipboard**, **Download & screenshot ke Shelf**:
-  nyalakan/matikan masing-masing fitur.
-- **Jadwal sholat**: nyalakan/matikan hitung mundur dan pilih kota (25 kota di Indonesia).
-  Waktu ditampilkan sesuai jam di Mac kamu.
-- **Perbarui DynaIsland…**: unduh versi terbaru dari GitHub dan pasang otomatis.
-- **Buka saat login**: otomatis jalan setiap Mac menyala (macOS 13+).
-- **Coba animasi**: tes notifikasi charger tanpa harus mencabut kabel.
-- **Izin Automation…**: membuka pengaturan kalau tadi tidak sengaja menekan "Don't Allow".
-- **Keluar**
+Klik ikon DynaIsland di menu bar → **Pengaturan…** (⌘,). Saat pertama kali dibuka, layar sambutan
+memandu memilih maskot dan memberi izin satu per satu.
+
+- **Tampilan**: pilih maskot (dengan pratinjau), gaya island (membungkus kamera / pil di bawah kamera),
+  sembunyikan saat tidak ada aktivitas.
+- **Fitur**: jadwal sholat + kota (25 kota), pop-up volume, pengingat meeting, pop-up Bluetooth,
+  riwayat clipboard, download & screenshot ke Shelf, gestur.
+- **Izin**: status setiap izin (Kalender, folder, Aksesibilitas, Bluetooth, kontrol musik) dengan tombol
+  untuk mengizinkan.
+- **Umum**: buka otomatis saat Mac menyala (macOS 13+), perbarui, coba animasi, keluar.
+
+Menu bar sendiri hanya berisi **Pengaturan…**, **Perbarui DynaIsland…**, dan **Keluar**.
 
 ## Batasan yang perlu diketahui
 
@@ -142,8 +143,9 @@ Gatekeeper tidak memblokir DynaIsland itu sendiri.
   "Now Playing" sistem untuk app pihak ketiga, jadi YouTube/Spotify di browser tidak terbaca.
 - Kalau izin Automation ditolak, judul lagu tetap muncul, tetapi tombol kontrol mati dan
   cover Apple Music tidak tampil.
-- Setiap kali di-build ulang, macOS mungkin menanyakan izin Automation lagi
-  (karena tanda tangan app berubah). Itu normal.
+- Izin cukup diberikan sekali. Setiap Mac membuat sertifikat tanda tangan sendiri (otomatis, disimpan di
+  keychain "dynaisland-signing"), jadi macOS tetap mengenali DynaIsland setelah update. Saat pertama kali
+  pindah ke versi ini, izin mungkin ditanyakan sekali lagi.
 - Pil otomatis minggir kalau jendela app yang aktif ada tepat di bawahnya (misalnya Chrome full screen
   atau di-maximize), supaya tidak menutupi tab. Arahkan kursor ke kamera untuk tetap membukanya.
   Notifikasi charger/baterai tetap muncul sebentar.
@@ -202,6 +204,9 @@ Sources/
   DailyViews.swift        tab Agenda & Clipboard + tampilan meeting di notch
   Updater.swift           cek versi baru di GitHub + pasang update tanpa Terminal
   MediaKeys.swift         tombol volume ditangani sendiri, supaya HUD macOS tidak ikut muncul
+  BluetoothMonitor.swift  pop-up AirPods / perangkat Bluetooth
+  SettingsViews.swift     jendela Pengaturan + layar sambutan
+sign-local.sh             tanda tangan per Mac supaya izin tidak hilang saat update
 Resources/AppIcon.svg     logo (sumber); AppIcon.png dipakai build.sh untuk ikon app
 install.sh                pemasang satu baris (curl)
 .github/workflows/        build otomatis di Mac milik GitHub, hasilnya di Releases
