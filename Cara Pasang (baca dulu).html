@@ -1,0 +1,230 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cara Pasang DynaIsland</title>
+<style>
+  :root {
+    --bg: #f5f5f7; --card: #ffffff; --text: #1d1d1f; --muted: #6e6e73; --line: #d9d9de;
+    --accent: #0a66d8; --accent-bg: #e8f1fc; --warn: #a15c00; --warn-bg: #fff4e0;
+    --code-bg: #1d1d1f; --code-text: #f5f5f7; --ok: #1f7a3a; --ok-bg: #e6f5ea;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #111113; --card: #1c1c1f; --text: #f2f2f4; --muted: #a1a1a8; --line: #333338;
+      --accent: #5aa2ff; --accent-bg: #14243a; --warn: #ffbf5c; --warn-bg: #2d2210;
+      --code-bg: #000000; --code-text: #f2f2f4; --ok: #6fd08c; --ok-bg: #12291a;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 16px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+  main { max-width: 720px; margin: 0 auto; padding: 40px 16px 64px; }
+  h1 { font-size: 30px; line-height: 1.2; margin: 0 0 8px; letter-spacing: -0.02em; }
+  h2 { font-size: 20px; margin: 40px 0 12px; }
+  h3 { font-size: 16px; margin: 0 0 6px; }
+  p { margin: 0 0 12px; }
+  .lead { color: var(--muted); font-size: 17px; margin-bottom: 24px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 18px 20px; margin: 12px 0; }
+  .step { display: grid; grid-template-columns: 32px minmax(0, 1fr); gap: 14px; }
+  .num {
+    width: 32px; height: 32px; border-radius: 50%; background: var(--accent); color: #fff;
+    display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 15px;
+  }
+  .step p:last-child, .card p:last-child, .card ul:last-child, .card ol:last-child { margin-bottom: 0; }
+  ul, ol { margin: 0 0 12px; padding-left: 22px; }
+  li { margin: 4px 0; }
+  .note { border-radius: 12px; padding: 14px 16px; margin: 14px 0; }
+  .note.warn { background: var(--warn-bg); }
+  .note.warn strong.tag { color: var(--warn); }
+  .note.ok { background: var(--ok-bg); }
+  .note.ok strong.tag { color: var(--ok); }
+  .note.info { background: var(--accent-bg); }
+  code, kbd {
+    font: 14px/1.4 ui-monospace, "SF Mono", Menlo, monospace;
+    background: var(--accent-bg); border-radius: 6px; padding: 1px 6px;
+  }
+  kbd { background: var(--card); border: 1px solid var(--line); border-bottom-width: 2px; }
+  .term {
+    background: var(--code-bg); color: var(--code-text); border-radius: 10px; padding: 12px 14px;
+    font: 14px/1.5 ui-monospace, "SF Mono", Menlo, monospace; overflow-x: auto; white-space: pre; margin: 10px 0;
+  }
+  .term .dim { color: #8e8e93; }
+  .file {
+    display: inline-flex; align-items: center; gap: 6px; font-weight: 600;
+    background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 1px 8px;
+  }
+  .file::before { content: ""; width: 10px; height: 12px; border-radius: 2px; background: var(--muted); display: inline-block; }
+  .capsule { display: inline-block; width: 18px; height: 9px; border-radius: 9px; background: var(--text); vertical-align: 1px; }
+  /* Mock of the macOS warning so it's easy to recognise */
+  .dialog {
+    max-width: 260px; margin: 12px auto; background: #2a2a2d; color: #f2f2f4; border-radius: 14px;
+    padding: 18px 16px 14px; text-align: center; font-size: 13px; line-height: 1.35;
+    border: 1px solid #3a3a3e;
+  }
+  .dialog .icon { font-size: 26px; line-height: 1; margin-bottom: 8px; }
+  .dialog b { display: block; margin-bottom: 6px; }
+  .dialog .small { color: #9a9aa0; font-size: 11px; margin-bottom: 12px; }
+  .dialog .buttons { display: flex; gap: 8px; }
+  .dialog .buttons span { flex: 1; border-radius: 7px; padding: 5px 0; background: #4a4a4e; }
+  .dialog .buttons span.primary { background: #0a66d8; }
+  .dialog .buttons span.pick { outline: 2px solid #ffbf5c; outline-offset: 2px; }
+  .caption { text-align: center; color: var(--muted); font-size: 13px; margin-top: -4px; }
+  table { width: 100%; border-collapse: collapse; font-size: 15px; }
+  td { padding: 10px 0; border-top: 1px solid var(--line); vertical-align: top; }
+  td:first-child { width: 42%; padding-right: 14px; font-weight: 600; }
+  tr:first-child td { border-top: none; }
+  footer { color: var(--muted); font-size: 13px; margin-top: 48px; }
+</style>
+</head>
+<body>
+<main>
+
+<h1>Cara pasang DynaIsland</h1>
+<p class="lead">"Dynamic Island" ala iPhone untuk MacBook. Pemasangannya sekitar satu menit
+dan tidak perlu Xcode atau akun developer.</p>
+
+<div class="card">
+  <h3>Yang dibutuhkan</h3>
+  <ul>
+    <li>MacBook dengan chip Apple (M1 atau lebih baru). Paling bagus di MacBook yang ada notch kameranya.</li>
+    <li>macOS 12 Monterey atau lebih baru.</li>
+    <li>Internet, hanya kalau <b>Command Line Tools</b> dari Apple belum terpasang (gratis, sekali saja).</li>
+  </ul>
+</div>
+
+<h2>Langkah pemasangan</h2>
+
+<div class="card step">
+  <div class="num">1</div>
+  <div>
+    <h3>Buka zip-nya</h3>
+    <p>Klik dua kali <span class="file">DynaIsland.zip</span>. Folder <b>DynaIsland</b> akan muncul di sebelahnya. Buka folder itu.</p>
+  </div>
+</div>
+
+<div class="card step">
+  <div class="num">2</div>
+  <div>
+    <h3>Klik dua kali "Pasang DynaIsland"</h3>
+    <p>Klik dua kali <span class="file">Pasang DynaIsland</span>. Terminal akan terbuka sendiri lalu
+    app di-build, dipasang ke folder Applications, dan langsung dijalankan.
+    Kalau berhasil, muncul notifikasi <b>"Sudah terpasang"</b>.</p>
+
+    <div class="note warn">
+      <p><strong class="tag">Muncul peringatan?</strong> Ini normal untuk file pertama kali dibuka
+      setelah dikirim lewat WhatsApp, AirDrop, atau browser. Filenya tidak rusak. macOS hanya belum
+      mengenalnya karena tidak ditandatangani akun developer Apple.</p>
+      <div class="dialog" aria-hidden="true">
+        <div class="icon">⚠️</div>
+        <b>"Pasang DynaIsland.command" is damaged and can't be opened.</b>
+        <div class="small">WhatsApp created this file today</div>
+        <div class="buttons"><span class="pick">Cancel</span><span class="primary">Move to Trash</span></div>
+      </div>
+      <p class="caption">Pesannya bisa juga "Not Opened" atau "Apple could not verify…". Pilih <b>Cancel</b> / <b>Done</b>, jangan Move to Trash.</p>
+      <p>Lalu jalankan lewat Terminal, cukup sekali:</p>
+      <ol>
+        <li>Buka <b>Terminal</b>: tekan <kbd>⌘</kbd> + <kbd>Space</kbd>, ketik <code>Terminal</code>, tekan <kbd>Enter</kbd>.</li>
+        <li>Ketik <code>bash</code> lalu <b>satu spasi</b>. Jangan tekan Enter dulu.</li>
+        <li>Seret file <span class="file">Pasang DynaIsland</span> dari Finder ke jendela Terminal. Alamatnya terisi sendiri, kira-kira seperti ini:</li>
+      </ol>
+      <div class="term"><span class="dim">%</span> bash /Users/kamu/Downloads/DynaIsland/Pasang\ DynaIsland.command</div>
+      <ol start="4">
+        <li>Tekan <kbd>Enter</kbd>. Pemasangan berjalan seperti biasa.</li>
+      </ol>
+      <p>Setelah sekali lewat Terminal, file-file di folder ini bisa langsung diklik dua kali.</p>
+    </div>
+  </div>
+</div>
+
+<div class="card step">
+  <div class="num">3</div>
+  <div>
+    <h3>Kalau diminta memasang Command Line Tools</h3>
+    <p>Kalau compiler Swift dari Apple belum ada, muncul jendela dari Apple. Klik <b>Install</b> dan tunggu
+    sampai selesai (beberapa menit, tergantung internet). Setelah itu ulangi langkah 2.</p>
+    <p>Kalau jendela ini tidak muncul, berarti sudah terpasang. Lanjut saja.</p>
+  </div>
+</div>
+
+<div class="card step">
+  <div class="num">4</div>
+  <div>
+    <h3>Selesai</h3>
+    <p>Island hitam muncul di sekitar kamera (atau pil kecil di tengah atas layar untuk MacBook tanpa notch),
+    dan ada ikon <span class="capsule" aria-label="kapsul"></span> di menu bar. Arahkan kursor ke notch untuk membuka island.</p>
+    <div class="note ok">
+      <p><strong class="tag">Beberapa izin akan ditanyakan.</strong> Klik <b>Allow</b> / <b>OK</b> untuk semuanya:</p>
+      <ul>
+        <li><b>Calendars</b>: untuk hitung mundur meeting dan tombol Gabung.</li>
+        <li><b>Downloads</b> dan <b>Desktop</b> folder: supaya download dan screenshot baru langsung masuk Shelf.</li>
+        <li><b>Control Spotify / Music</b> (saat pertama memutar musik): supaya tombol musik dan cover lagu berfungsi.</li>
+      </ul>
+      <p>Setelah update, izin ini kadang ditanyakan lagi. Itu normal.</p>
+    </div>
+    <p>Supaya otomatis jalan setiap Mac menyala: klik ikon kapsul, pilih <b>Buka saat login</b>.</p>
+  </div>
+</div>
+
+<h2>Memperbarui ke versi baru</h2>
+<div class="card">
+  <p>Lakukan langkah 1 dan 2 dengan zip yang baru. Versi lama tertimpa sendiri, tidak perlu dihapus dulu.
+  Peringatan di langkah 2 bisa muncul lagi untuk setiap zip baru. Pakai cara Terminal yang sama.</p>
+</div>
+
+<h2>Menghapus</h2>
+<div class="card">
+  <p>Klik dua kali <span class="file">Hapus DynaIsland</span> di folder yang sama. App, pengaturan, dan izinnya ikut dihapus.
+  Kalau kena peringatan, pakai cara Terminal di langkah 2 dengan file <b>Hapus DynaIsland</b>.</p>
+</div>
+
+<h2>Kalau ada masalah</h2>
+<div class="card">
+  <table>
+    <tr>
+      <td>Muncul "Build gagal"</td>
+      <td>Salin atau screenshot pesan error di jendela Terminal, lalu kirim ke orang yang memberimu file ini.</td>
+    </tr>
+    <tr>
+      <td>Island tidak terlihat</td>
+      <td>Cek ikon kapsul di menu bar. Kalau ada, buka menunya dan pastikan <b>Sembunyikan saat idle</b> tidak dicentang. Kalau tidak ada, ulangi langkah 2.</td>
+    </tr>
+    <tr>
+      <td>Tombol musik tidak berfungsi</td>
+      <td>Klik ikon kapsul → <b>Izin Automation (kontrol musik)…</b>, lalu nyalakan DynaIsland untuk Spotify / Music.</td>
+    </tr>
+    <tr>
+      <td>Meeting tidak muncul di tab Agenda</td>
+      <td>Buka tab Agenda dan klik <b>Izinkan</b> / <b>Buka pengaturan</b>, lalu nyalakan DynaIsland di <b>Privacy &amp; Security → Calendars</b>. Akun Google/Outlook harus sudah ditambahkan di app Calendar.</td>
+    </tr>
+    <tr>
+      <td>Download / screenshot tidak masuk Shelf</td>
+      <td>Nyalakan DynaIsland di <b>Privacy &amp; Security → Files and Folders</b> (Downloads dan Desktop). Pastikan <b>Download &amp; screenshot ke Shelf</b> dicentang di menu kapsul.</td>
+    </tr>
+    <tr>
+      <td>Lagu dari YouTube / browser tidak muncul</td>
+      <td>Memang belum bisa. Sejak macOS 15.4, Apple menutup akses "Now Playing" untuk app pihak ketiga. Yang terbaca hanya app Spotify dan Apple Music.</td>
+    </tr>
+    <tr>
+      <td>Izin Automation ditanyakan lagi setelah update</td>
+      <td>Normal, karena app di-build ulang. Klik <b>OK</b> lagi.</td>
+    </tr>
+  </table>
+</div>
+
+<h2>Apakah aman?</h2>
+<div class="card">
+  <p>Peringatan dari macOS muncul karena app ini tidak berasal dari App Store dan tidak ditandatangani akun developer
+  Apple, bukan karena isinya berbahaya. Semua kode ada di folder <b>Sources</b> dan bisa dibaca. Script pemasangnya
+  (<b>Pasang DynaIsland</b> dan <b>build.sh</b>) bisa dibuka dengan TextEdit untuk melihat apa saja yang dijalankan.</p>
+  <p>App ini hanya memakai internet untuk mengambil gambar cover lagu Spotify. Jadwal sholat dihitung di Mac kamu tanpa internet.</p>
+</div>
+
+<footer>Panduan lengkap fitur dan pengaturan ada di README.md di folder yang sama.</footer>
+
+</main>
+</body>
+</html>

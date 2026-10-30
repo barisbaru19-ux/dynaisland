@@ -1,0 +1,46 @@
+name: Build DynaIsland
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Compiler
+        run: xcrun swiftc --version
+
+      - name: Build (Apple Silicon + Intel)
+        env:
+          BUILD_NUMBER: ${{ github.run_number }}
+        run: |
+          chmod +x build.sh
+          ./build.sh --release
+
+      - name: Package
+        run: |
+          ditto -c -k --keepParent build/DynaIsland.app DynaIsland-app.zip
+          echo "${{ github.run_number }}" > version.txt
+          ls -la DynaIsland-app.zip version.txt
+
+      - name: Publish release "latest"
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release delete latest --yes --cleanup-tag || true
+          gh release create latest DynaIsland-app.zip version.txt \
+            --title "DynaIsland versi ${{ github.run_number }}" \
+            --notes "Pasang atau perbarui dengan satu baris di Terminal: curl -fsSL https://raw.githubusercontent.com/${{ github.repository }}/main/install.sh | bash" \
+            --target "${{ github.sha }}" \
+            --latest
