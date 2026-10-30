@@ -50,6 +50,15 @@ fi
 
 cp Info.plist "${APP}/Contents/Info.plist"
 
+# Musik dari semua app (YouTube di browser, Podcasts…): mediaremote-adapter, kalau sudah di-build ke vendor/
+if [[ -d vendor/MediaRemoteAdapter.framework && -f vendor/mediaremote-adapter.pl ]]; then
+  mkdir -p "${APP}/Contents/Frameworks"
+  cp -R vendor/MediaRemoteAdapter.framework "${APP}/Contents/Frameworks/"
+  cp vendor/mediaremote-adapter.pl "${APP}/Contents/Resources/"
+  [[ -f vendor/MediaRemoteAdapter-LICENSE.txt ]] && cp vendor/MediaRemoteAdapter-LICENSE.txt "${APP}/Contents/Resources/"
+  echo "• Now Playing semua app: ikut"
+fi
+
 # Ikon app: Resources/AppIcon.png (1024 px) → AppIcon.icns
 make_icon() {
   [[ -f Resources/AppIcon.png ]] || return 0
@@ -68,6 +77,9 @@ if [[ -n "${BUILD_NUMBER:-}" ]]; then
   plutil -replace CFBundleShortVersionString -string "1.${BUILD_NUMBER}" "${APP}/Contents/Info.plist"
 fi
 if [[ "${MODE}" == "--release" ]]; then
+  for FRAMEWORK in "${APP}"/Contents/Frameworks/*.framework; do
+    if [[ -d "${FRAMEWORK}" ]]; then codesign --force --sign - "${FRAMEWORK}" >/dev/null 2>&1; fi
+  done
   codesign --force --sign - "${APP}" >/dev/null 2>&1   # each Mac re-signs it with its own certificate
 else
   /bin/bash ./sign-local.sh "${APP}"

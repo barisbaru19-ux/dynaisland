@@ -6,11 +6,14 @@ import SwiftUI
 enum PlayerSource: String, CaseIterable {
     case spotify
     case music
+    /// Any other app, read through the system Now Playing (YouTube in a browser, Podcasts, VLC…).
+    case system
 
     var bundleID: String {
         switch self {
         case .spotify: return "com.spotify.client"
         case .music: return "com.apple.Music"
+        case .system: return ""
         }
     }
 
@@ -18,6 +21,7 @@ enum PlayerSource: String, CaseIterable {
         switch self {
         case .spotify: return "Spotify"
         case .music: return "Apple Music"
+        case .system: return "Pemutar media"
         }
     }
 }
@@ -32,6 +36,11 @@ struct TrackInfo: Equatable {
     var position: Double   // seconds, sampled at IslandModel.sampledAt
     var isPlaying: Bool
     var artworkURL: String
+    /// The app that plays it (browser, Podcasts…), when known.
+    var appBundleID: String? = nil
+    var appName: String? = nil
+
+    var playerName: String { appName ?? source.displayName }
 }
 
 struct BatteryState: Equatable {

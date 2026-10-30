@@ -310,7 +310,7 @@ struct MusicTabView: View {
                         ArtworkView(image: model.artwork, size: 54, radius: 12)
                     }
                     .buttonStyle(PressScaleStyle())
-                    .help("Buka \(track.source.displayName)")
+                    .help("Buka \(track.playerName)")
 
                     VStack(alignment: .leading, spacing: 2) {
                         Text(track.title.isEmpty ? "Tanpa judul" : track.title)
@@ -321,7 +321,7 @@ struct MusicTabView: View {
                             .font(.system(size: 12))
                             .foregroundColor(Color.white.opacity(0.6))
                             .lineLimit(1)
-                        Text(track.source.displayName)
+                        Text(track.playerName)
                             .font(.system(size: 10, weight: .medium))
                             .foregroundColor(Color.white.opacity(0.35))
                     }

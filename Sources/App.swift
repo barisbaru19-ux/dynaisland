@@ -22,6 +22,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var volume: VolumeMonitor?
     private var updater: Updater?
     private var bluetooth: BluetoothMonitor?
+    private var systemNowPlaying: SystemNowPlaying?
     private var statusItem: NSStatusItem?
     private var settingsWindow: NSWindow?
     private var onboardingWindow: NSWindow?
@@ -41,6 +42,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         updater.launched()
         updater.startChecking()
         bluetooth = BluetoothMonitor(model: model)
+        // Music from every app (YouTube in a browser, Podcasts…), when the bundled adapter works here.
+        let system = SystemNowPlaying(model: model)
+        model.player?.system = system
+        system.start()
+        systemNowPlaying = system
         buildStatusItem()
 
         if model.onboarded {
@@ -48,6 +54,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         } else {
             showOnboarding()
         }
+    }
+
+    func applicationWillTerminate(_ notification: Notification) {
+        systemNowPlaying?.stop()
     }
 
     /// Reopening the app from Finder / Spotlight shows Settings (there's no Dock icon to click).

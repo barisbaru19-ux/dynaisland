@@ -14,6 +14,9 @@ PASSWORD="dynaisland-local-signing"
 
 fallback() {
   echo "• Tanda tangan lokal tidak bisa dibuat ($1), pakai tanda tangan biasa."
+  for FRAMEWORK in "${APP}"/Contents/Frameworks/*.framework; do
+    [[ -d "${FRAMEWORK}" ]] && codesign --force --sign - "${FRAMEWORK}" >/dev/null 2>&1
+  done
   codesign --force --sign - "${APP}" >/dev/null 2>&1
   exit 0
 }
@@ -55,6 +58,11 @@ if ! security list-keychains -d user | grep -q "dynaisland-signing"; then
   security list-keychains -d user -s "${KEYCHAIN}" $(security list-keychains -d user | tr -d '"') >/dev/null 2>&1
 fi
 
+# Bundled frameworks first (Now Playing adapter), then the app itself.
+for FRAMEWORK in "${APP}"/Contents/Frameworks/*.framework; do
+  [[ -d "${FRAMEWORK}" ]] || continue
+  codesign --force --sign "${NAME}" --keychain "${KEYCHAIN}" "${FRAMEWORK}" >/dev/null 2>&1 || fallback "framework"
+done
 codesign --force --sign "${NAME}" --keychain "${KEYCHAIN}" "${APP}" >/dev/null 2>&1 || fallback "codesign"
 codesign --verify "${APP}" >/dev/null 2>&1 || fallback "verify"
 echo "• Ditandatangani dengan sertifikat Mac ini (izin tidak perlu diulang saat update)"

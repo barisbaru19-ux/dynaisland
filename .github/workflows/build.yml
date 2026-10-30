@@ -21,6 +21,25 @@ jobs:
       - name: Compiler
         run: xcrun swiftc --version
 
+      - name: Build MediaRemoteAdapter (Now Playing from every app, BSD-3)
+        run: |
+          git clone https://github.com/ungive/mediaremote-adapter.git "$RUNNER_TEMP/mra"
+          git -C "$RUNNER_TEMP/mra" checkout 0e82bf1c44ec39554fbfc402ec88a48c6ae2a0fd
+          cmake -S "$RUNNER_TEMP/mra" -B "$RUNNER_TEMP/mra/build" -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64" -DCMAKE_OSX_DEPLOYMENT_TARGET=12.0
+          cmake --build "$RUNNER_TEMP/mra/build" --config Release
+          mkdir -p vendor
+          cp -R "$RUNNER_TEMP/mra/build/MediaRemoteAdapter.framework" vendor/
+          cp "$RUNNER_TEMP/mra/bin/mediaremote-adapter.pl" vendor/
+          cp "$RUNNER_TEMP/mra/LICENSE" vendor/MediaRemoteAdapter-LICENSE.txt
+          lipo -info vendor/MediaRemoteAdapter.framework/MediaRemoteAdapter || true
+          # Smoke test: the adapter must answer on this runner (prints null or JSON).
+          /usr/bin/perl vendor/mediaremote-adapter.pl "$PWD/vendor/MediaRemoteAdapter.framework" get --no-artwork > "$RUNNER_TEMP/get.txt" 2>&1 &
+          PID=$!
+          for i in $(seq 1 20); do kill -0 $PID 2>/dev/null || break; sleep 1; done
+          kill $PID 2>/dev/null || true
+          wait $PID && echo "adapter ok: $(head -c 200 "$RUNNER_TEMP/get.txt")" || echo "::warning::adapter get did not succeed: $(head -c 300 "$RUNNER_TEMP/get.txt")"
+
       - name: Build (Apple Silicon + Intel)
         env:
           BUILD_NUMBER: ${{ github.run_number }}

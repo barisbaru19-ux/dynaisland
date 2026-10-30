@@ -17,6 +17,9 @@ final class NowPlayingMonitor: NSObject {
     private var musicArtworkScript: NSAppleScript?
     private var artworkKey = ""
     private var musicArtworkRetries = 0
+    /// Every-app Now Playing; when it works it replaces the AppleScript path below.
+    weak var system: SystemNowPlaying?
+    private var systemActive: Bool { system?.isActive == true }
 
     private enum QueryResult {
         case track(TrackInfo)
@@ -53,7 +56,11 @@ final class NowPlayingMonitor: NSObject {
 
     func playPause() {
         guard var track = model.track else { return }
-        send("playpause", to: track.source)
+        if systemActive {
+            system?.send(.togglePlayPause)
+        } else {
+            send("playpause", to: track.source)
+        }
         // Optimistic UI so the button flips immediately.
         if track.isPlaying {
             let elapsed = Date().timeIntervalSince(model.sampledAt)
@@ -69,19 +76,21 @@ final class NowPlayingMonitor: NSObject {
 
     func next() {
         guard let source = model.track?.source else { return }
-        send("next track", to: source)
+        if systemActive { system?.send(.next) } else { send("next track", to: source) }
         refreshSoon()
     }
 
     func previous() {
         guard let source = model.track?.source else { return }
-        send("previous track", to: source)
+        if systemActive { system?.send(.previous) } else { send("previous track", to: source) }
         refreshSoon()
     }
 
     func openPlayerApp() {
-        guard let source = model.track?.source,
-              let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: source.bundleID) else { return }
+        guard let track = model.track else { return }
+        let bundleID = track.appBundleID ?? track.source.bundleID
+        guard !bundleID.isEmpty,
+              let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleID) else { return }
         NSWorkspace.shared.openApplication(at: url, configuration: NSWorkspace.OpenConfiguration(), completionHandler: nil)
     }
 
@@ -92,6 +101,7 @@ final class NowPlayingMonitor: NSObject {
     }
 
     @objc private func playerNotification(_ note: Notification) {
+        guard !systemActive else { return }
         if model.automationDenied {
             applyNotification(note)   // no AppleScript access → use what the notification tells us
         } else {
@@ -108,6 +118,7 @@ final class NowPlayingMonitor: NSObject {
     }
 
     func refresh() {
+        guard !systemActive else { return }
         var found: [TrackInfo] = []
         var denied = false
 
@@ -145,6 +156,11 @@ final class NowPlayingMonitor: NSObject {
     }
 
     private func apply(_ info: TrackInfo) {
+        applyTrack(info, loadArtwork: true)
+    }
+
+    /// Shows a track (from AppleScript or from the system Now Playing) and peeks on changes.
+    func applyTrack(_ info: TrackInfo, loadArtwork: Bool) {
         let old = model.track
         if old != info {
             model.track = info
@@ -157,7 +173,11 @@ final class NowPlayingMonitor: NSObject {
         } else if old?.isPlaying == false && info.isPlaying {
             model.peek(seconds: 2)
         }
-        loadArtworkIfNeeded(for: info)
+        if isNewTrack && !loadArtwork {
+            model.artwork = nil
+            model.accent = .white
+        }
+        if loadArtwork { loadArtworkIfNeeded(for: info) }
     }
 
     private func applyNotification(_ note: Notification) {
@@ -231,6 +251,7 @@ final class NowPlayingMonitor: NSObject {
     /// Compiled lazily, only once the player is running — compiling a `tell` for an app
     /// that isn't installed would pop up a "Where is …?" dialog.
     private func statusScript(for source: PlayerSource) -> NSAppleScript? {
+        if source == .system { return nil }
         if let cached = statusScripts[source] { return cached }
 
         let body: String
@@ -249,6 +270,8 @@ final class NowPlayingMonitor: NSObject {
             set t to current track
             return {ps, (name of t), (artist of t), (album of t), (duration of t), (player position), "", (persistent ID of t)}
             """
+        case .system:
+            return nil
         }
 
         let text = """
@@ -330,6 +353,8 @@ final class NowPlayingMonitor: NSObject {
                 musicArtworkRetries += 1
                 artworkKey = "\(info.source.rawValue)|\(info.id)|retry"
             }
+        case .system:
+            break
         }
     }
 
