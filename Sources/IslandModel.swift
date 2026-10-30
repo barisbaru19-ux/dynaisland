@@ -346,6 +346,13 @@ final class IslandModel: ObservableObject {
         didSet { UserDefaults.standard.set(autoShelfEnabled, forKey: "autoShelfEnabled") }
     }
 
+    // Volume pop-up: the island's, macOS's, or both
+    @Published var volumeHUDMode: VolumeHUDMode = VolumeHUDMode(rawValue: UserDefaults.standard.string(forKey: "volumeHUDMode") ?? "") ?? .island {
+        didSet { UserDefaults.standard.set(volumeHUDMode.rawValue, forKey: "volumeHUDMode") }
+    }
+    /// The volume keys are being handled by DynaIsland (Accessibility permission granted).
+    var mediaKeysActive = false
+
     // Updating from a newer DynaIsland zip
     @Published var availableUpdate: URL?
     @Published var isUpdating = false
@@ -401,6 +408,18 @@ final class IslandModel: ObservableObject {
 
     /// Volume pop-up. Repeated key presses update the same pop-up instead of re-animating it.
     func showVolume(level: Double, muted: Bool) {
+        switch volumeHUDMode {
+        case .system:
+            return
+        case .both:
+            break
+        case .island:
+            // Until DynaIsland may handle the volume keys, macOS shows its own HUD: don't add a second one.
+            guard mediaKeysActive else {
+                askForMediaKeysOnce()
+                return
+            }
+        }
         let percent = Int((level * 100).rounded())
         let symbol: String
         if muted || level <= 0.001 {
@@ -424,6 +443,17 @@ final class IslandModel: ObservableObject {
                                   level: muted ? 0 : level)
         }
         scheduleNoticeEnd(after: 1.8)
+    }
+
+    /// Once per build: explain and show macOS's Accessibility dialog.
+    private func askForMediaKeysOnce() {
+        let defaults = UserDefaults.standard
+        let build = Updater.currentBuild
+        guard defaults.integer(forKey: "askedAccessibilityBuild") != build else { return }
+        defaults.set(build, forKey: "askedAccessibilityBuild")
+        show(IslandNotice(symbol: "hand.raised.fill", title: "Izinkan Aksesibilitas",
+                          detail: "1 pop-up", tint: .yellow), seconds: 5)
+        MediaKeys.askForPermission()
     }
 
     private func scheduleNoticeEnd(after seconds: Double) {

@@ -112,7 +112,18 @@ final class IslandController: NSObject {
         clipboard.tick()
         calendar.tick()
         folders.tick()
+        updateMediaKeys()
         model.setAsleep(Self.secondsSinceLastInput() > 120)   // mascot naps after 2 minutes
+    }
+
+    /// Volume keys: handled by DynaIsland (no macOS HUD) only in "island" mode and with permission.
+    private func updateMediaKeys() {
+        if model.volumeHUDMode == .island && MediaKeys.isTrusted {
+            if !MediaKeys.isActive { MediaKeys.start() }
+        } else if MediaKeys.isActive || MediaKeys.tap != nil {
+            MediaKeys.stop()   // other mode, or permission taken away
+        }
+        model.mediaKeysActive = MediaKeys.isActive
     }
 
     /// Seconds since the last key press, click, scroll or mouse move anywhere on the Mac.

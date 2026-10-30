@@ -35,7 +35,7 @@ Notch dideteksi otomatis.
 | Ganti lagu | Pil melebar sebentar dan menampilkan judul lagu |
 | Charger dicolok / dicabut | Notifikasi "Mengisi daya 84%" / "Pakai baterai" |
 | Baterai 20% & 10% | Peringatan "Baterai lemah" |
-| Volume diubah | Pop-up volume dengan bar level (tanpa izin tambahan) |
+| Volume diubah | Pop-up volume dengan bar level, menggantikan HUD volume macOS |
 | Terisi 100% | "Terisi penuh" |
 | 10 menit sebelum sholat | Nama sholat di kiri kamera, hitung mundur di kanan, bunyi saat masuk waktu |
 | Timer fokus berjalan | Ring progres di kiri kamera, sisa waktu di kanan |
@@ -123,6 +123,7 @@ Gatekeeper tidak memblokir DynaIsland itu sendiri.
 - **Sembunyikan saat idle**: pil hilang kalau tidak ada musik atau notifikasi, tapi hover di tengah atas tetap memunculkannya.
 - **Gaya pil (di bawah kamera)**: khusus Mac ber-notch. Island jadi pil yang melayang di bawah kamera.
 - **Maskot**: pilih Moci, Kucing, Bit, atau Tanpa maskot.
+- **Pop-up volume**: hanya di island (bawaan), hanya HUD macOS, atau keduanya.
 - **Pengingat meeting (Kalender)**, **Riwayat clipboard**, **Download & screenshot ke Shelf**:
   nyalakan/matikan masing-masing fitur.
 - **Jadwal sholat**: nyalakan/matikan hitung mundur dan pilih kota (25 kota di Indonesia).
@@ -144,7 +145,11 @@ Gatekeeper tidak memblokir DynaIsland itu sendiri.
 - Pil otomatis minggir kalau jendela app yang aktif ada tepat di bawahnya (misalnya Chrome full screen
   atau di-maximize), supaya tidak menutupi tab. Arahkan kursor ke kamera untuk tetap membukanya.
   Notifikasi charger/baterai tetap muncul sebentar.
-- Pop-up volume muncul bersama HUD volume bawaan macOS (tidak menggantikannya).
+- **Pop-up volume**: secara bawaan hanya pop-up di island yang muncul, dan HUD volume macOS disembunyikan.
+  Untuk itu DynaIsland perlu izin **Aksesibilitas** (ditanyakan saat pertama kali menekan tombol volume):
+  System Settings → Privacy & Security → Accessibility → nyalakan DynaIsland. Sebelum diizinkan, hanya HUD
+  macOS yang muncul, jadi tidak pernah ada dua pop-up. ⌥⇧ + tombol volume tetap mengubah per seperempat langkah.
+  Pilihan lain di menu **Pop-up volume**: "Hanya HUD macOS" atau "Keduanya".
 - Saat pertama kali jalan, macOS meminta izin **Kalender**, folder **Downloads**, dan **Desktop**
   (untuk screenshot). Klik **Allow / OK**. Seperti izin Automation, izin ini bisa ditanyakan lagi
   setelah build ulang. Kalau tidak sengaja ditolak: System Settings → Privacy & Security →
@@ -194,6 +199,7 @@ Sources/
   DailyTools.swift        riwayat clipboard, meeting dari Calendar, pantau Downloads/screenshot
   DailyViews.swift        tab Agenda & Clipboard + tampilan meeting di notch
   Updater.swift           cek versi baru di GitHub + pasang update tanpa Terminal
+  MediaKeys.swift         tombol volume ditangani sendiri, supaya HUD macOS tidak ikut muncul
 install.sh                pemasang satu baris (curl)
 .github/workflows/        build otomatis di Mac milik GitHub, hasilnya di Releases
 ```

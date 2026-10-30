@@ -103,6 +103,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         prayerItem.submenu = prayerMenu
         menu.addItem(prayerItem)
 
+        let volumeItem = NSMenuItem(title: "Pop-up volume", action: nil, keyEquivalent: "")
+        let volumeMenu = NSMenu()
+        for mode in VolumeHUDMode.allCases {
+            let item = NSMenuItem(title: mode.title, action: #selector(selectVolumeMode(_:)), keyEquivalent: "")
+            item.target = self
+            item.representedObject = mode.rawValue
+            item.state = mode == model?.volumeHUDMode ? .on : .off
+            volumeMenu.addItem(item)
+        }
+        volumeItem.submenu = volumeMenu
+        menu.addItem(volumeItem)
+
         let meeting = NSMenuItem(title: "Pengingat meeting (Kalender)", action: #selector(toggleMeeting(_:)), keyEquivalent: "")
         meeting.target = self
         meeting.state = (model?.meetingEnabled ?? true) ? .on : .off
@@ -186,6 +198,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 item.state = kind == selected ? .on : .off
             }
         }
+    }
+
+    @objc private func selectVolumeMode(_ sender: NSMenuItem) {
+        guard let model = model,
+              let raw = sender.representedObject as? String,
+              let mode = VolumeHUDMode(rawValue: raw) else { return }
+        model.volumeHUDMode = mode
+        for item in sender.menu?.items ?? [] {
+            if let itemRaw = item.representedObject as? String {
+                item.state = itemRaw == raw ? .on : .off
+            }
+        }
+        if mode == .island && !MediaKeys.isTrusted {
+            MediaKeys.askForPermission()
+        }
+        controller?.secondTick()
     }
 
     @objc private func toggleMeeting(_ sender: NSMenuItem) {
