@@ -76,11 +76,12 @@ struct IslandNotice: Equatable {
 // MARK: - Tabs, focus timer
 
 enum IslandTab: String, CaseIterable, Hashable {
-    case music, agenda, prayer, focus, shelf, clipboard
+    case music, today, agenda, prayer, focus, shelf, clipboard
 
     var title: String {
         switch self {
         case .music: return "Musik"
+        case .today: return "Hari ini"
         case .agenda: return "Agenda"
         case .prayer: return "Sholat"
         case .focus: return "Fokus"
@@ -92,6 +93,7 @@ enum IslandTab: String, CaseIterable, Hashable {
     var symbol: String {
         switch self {
         case .music: return "music.note"
+        case .today: return "checklist"
         case .agenda: return "calendar"
         case .prayer: return "moon.stars"
         case .focus: return "timer"
@@ -371,6 +373,19 @@ final class IslandModel: ObservableObject {
     @Published var volumeFlash: Double?
     private var volumeFlashTask: Task<Void, Never>?
 
+    // "Hari ini" checklist
+    @Published var checklistEnabled: Bool = (UserDefaults.standard.object(forKey: "checklistEnabled") as? Bool) ?? true {
+        didSet { UserDefaults.standard.set(checklistEnabled, forKey: "checklistEnabled") }
+    }
+    @Published var checklist: [ChecklistItem] = ChecklistStorage.loadItems()
+    /// The day the checklist belongs to; when the date changes, routines reset.
+    @Published var checklistDay: String = UserDefaults.standard.string(forKey: ChecklistStorage.dayKey) ?? DayKey.string()
+    @Published var checklistStreak = 0
+    /// Days on which everything was checked off (for the streak).
+    private var completedDays: [String] = UserDefaults.standard.stringArray(forKey: ChecklistStorage.completedDaysKey) ?? []
+    /// "Good morning" notice waiting for the first moment the Mac is in use.
+    private var morningNoticePending = false
+
     // Keyboard shortcuts
     @Published var hotKeysEnabled: Bool = (UserDefaults.standard.object(forKey: "hotKeysEnabled") as? Bool) ?? true {
         didSet { UserDefaults.standard.set(hotKeysEnabled, forKey: "hotKeysEnabled") }
@@ -527,7 +542,8 @@ final class IslandModel: ObservableObject {
         } else if track?.isPlaying == true {
             openTab = .music
         }
-        // Otherwise keep the tab used last time.
+        // Otherwise keep the tab used last time (unless it has been switched off).
+        if openTab == .today && !checklistEnabled { openTab = .music }
     }
 
     // MARK: Prayer
@@ -690,6 +706,106 @@ final class IslandModel: ObservableObject {
     func installUpdate(from zip: URL? = nil) {
         guard !isUpdating, let source = zip ?? availableUpdate ?? Updater.newestZip() else { return }
         updater?.install(from: source)
+    }
+
+    // MARK: Checklist
+
+    var checklistDoneCount: Int { checklist.filter { isDoneToday($0) }.count }
+
+    func isDoneToday(_ item: ChecklistItem) -> Bool {
+        item.doneOn == checklistDay
+    }
+
+    func addChecklistItem(_ title: String, routine: Bool) {
+        rolloverChecklistIfNeeded()
+        let clean = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !clean.isEmpty else { return }
+        checklist.append(ChecklistItem(title: clean, isRoutine: routine, doneOn: nil, addedOn: checklistDay))
+        checklistChanged()
+    }
+
+    func toggleChecklistItem(_ id: UUID) {
+        rolloverChecklistIfNeeded()
+        guard let index = checklist.firstIndex(where: { $0.id == id }) else { return }
+        let wasAllDone = !checklist.isEmpty && checklistDoneCount == checklist.count
+        checklist[index].doneOn = isDoneToday(checklist[index]) ? nil : checklistDay
+        let nowDone = isDoneToday(checklist[index])
+        checklistChanged()
+        guard nowDone else { return }
+        if checklistDoneCount == checklist.count && !wasAllDone {
+            NSSound(named: "Glass")?.play()
+            react(.happy, seconds: 6)
+            let streak = checklistStreak > 1 ? "\(checklistStreak) hari" : "Mantap"
+            show(IslandNotice(symbol: "checkmark.seal.fill", title: "Checklist selesai", detail: streak, tint: .green), seconds: 3.5)
+        } else {
+            react(.happy, seconds: 1.2)
+        }
+    }
+
+    func removeChecklistItem(_ id: UUID) {
+        checklist.removeAll { $0.id == id }
+        checklistChanged()
+    }
+
+    func setChecklistRoutine(_ id: UUID, routine: Bool) {
+        guard let index = checklist.firstIndex(where: { $0.id == id }) else { return }
+        checklist[index].isRoutine = routine
+        checklistChanged()
+    }
+
+    /// Called every second (and before every change): at the start of a new day, routines come back
+    /// unchecked, finished tasks are cleared and unfinished ones carry over.
+    func rolloverChecklistIfNeeded(now: Date = Date()) {
+        let today = DayKey.string(now)
+        guard today != checklistDay else { return }
+        checklistDay = today
+        checklist.removeAll { !$0.isRoutine && $0.doneOn != nil && $0.doneOn != today }
+        UserDefaults.standard.set(today, forKey: ChecklistStorage.dayKey)
+        checklistChanged()
+        if checklistEnabled && !checklist.isEmpty { morningNoticePending = true }
+    }
+
+    /// "Hari ini · 5 checklist" once the Mac is in use on a new day.
+    func showMorningChecklistIfNeeded(now: Date = Date()) {
+        guard morningNoticePending, !isAsleep, notice == nil, !isHovered,
+              Calendar.current.component(.hour, from: now) >= 5 else { return }
+        morningNoticePending = false
+        let open = checklist.count - checklistDoneCount
+        guard open > 0 else { return }
+        show(IslandNotice(symbol: "checklist", title: "Hari ini", detail: "\(open) checklist", tint: .white), seconds: 4)
+        react(.happy, seconds: 3)
+    }
+
+    /// Saves, and keeps the streak (days in a row with everything checked off) up to date.
+    private func checklistChanged() {
+        let allDone = !checklist.isEmpty && checklistDoneCount == checklist.count
+        if allDone {
+            if !completedDays.contains(checklistDay) { completedDays.append(checklistDay) }
+        } else {
+            completedDays.removeAll { $0 == checklistDay }
+        }
+        completedDays = Array(completedDays.suffix(400))
+        checklistStreak = streak()
+        ChecklistStorage.save(checklist)
+        UserDefaults.standard.set(completedDays, forKey: ChecklistStorage.completedDaysKey)
+    }
+
+    private func streak(now: Date = Date()) -> Int {
+        let done = Set(completedDays)
+        var day = now
+        if !done.contains(DayKey.string(day)) { day = DayKey.previous(day) }   // today isn't finished yet
+        var count = 0
+        while done.contains(DayKey.string(day)) {
+            count += 1
+            day = DayKey.previous(day)
+        }
+        return count
+    }
+
+    /// Recomputed once at launch.
+    func prepareChecklist() {
+        rolloverChecklistIfNeeded()
+        checklistStreak = streak()
     }
 
     // MARK: Shelf

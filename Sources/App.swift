@@ -44,6 +44,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         updater.launched()
         updater.startChecking()
         bluetooth = BluetoothMonitor(model: model)
+        model.prepareChecklist()
         // Music from every app (YouTube in a browser, Podcasts…), when the bundled adapter works here.
         let system = SystemNowPlaying(model: model)
         model.player?.system = system
@@ -156,6 +157,30 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                                               content: ReportView(report: Diagnostics.report(model: model)),
                                               size: NSSize(width: 580, height: 560))
         bringToFront(reportWindow)
+    }
+
+    /// "Tambah" in the Hari ini tab: a small dialog to type a task (the island itself can't take typing).
+    @objc func addChecklistItem() {
+        guard let model = model else { return }
+        NSApp.activate(ignoringOtherApps: true)
+        let alert = NSAlert()
+        alert.messageText = "Tambah ke checklist hari ini"
+        alert.informativeText = "Rutinitas muncul lagi setiap pagi. Tugas sekali yang belum selesai terbawa ke besok."
+        let field = NSTextField(frame: NSRect(x: 0, y: 30, width: 300, height: 24))
+        field.placeholderString = "Contoh: Kirim laporan ke klien"
+        let routine = NSButton(checkboxWithTitle: "Ulangi setiap hari (rutinitas)", target: nil, action: nil)
+        routine.frame = NSRect(x: 0, y: 2, width: 300, height: 20)
+        let box = NSView(frame: NSRect(x: 0, y: 0, width: 300, height: 56))
+        box.addSubview(field)
+        box.addSubview(routine)
+        alert.accessoryView = box
+        alert.addButton(withTitle: "Tambah")
+        alert.addButton(withTitle: "Batal")
+        alert.window.initialFirstResponder = field
+        if alert.runModal() == .alertFirstButtonReturn {
+            model.addChecklistItem(field.stringValue, routine: routine.state == .on)
+        }
+        NSApp.deactivate()   // back to the app you were using
     }
 
     func hotKeysSettingChanged() {

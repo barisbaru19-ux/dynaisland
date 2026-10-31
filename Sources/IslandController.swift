@@ -133,6 +133,8 @@ final class IslandController: NSObject {
         let idle = Self.secondsSinceLastInput()
         model.setAsleep(idle > 120)   // mascot naps after 2 minutes
         model.updater?.considerAutoUpdate(idleSeconds: idle)
+        model.rolloverChecklistIfNeeded()
+        model.showMorningChecklistIfNeeded()
     }
 
     /// Volume keys: handled by DynaIsland (no macOS HUD) only in "island" mode and with permission.

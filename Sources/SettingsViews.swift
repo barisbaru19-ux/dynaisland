@@ -125,6 +125,7 @@ struct FeatureSettings: View {
                                 model.bluetoothEnabled = value
                                 DynaIslandApp.delegate.bluetoothSettingChanged()
                             }))
+                        Toggle("Checklist hari ini (rutinitas di-reset setiap pagi)", isOn: $model.checklistEnabled)
                         Toggle("Riwayat clipboard", isOn: $model.clipboardEnabled)
                         Toggle("Download & screenshot otomatis ke Shelf", isOn: $model.autoShelfEnabled)
                         Toggle("Gestur di tab Musik: geser untuk ganti lagu, scroll untuk volume",

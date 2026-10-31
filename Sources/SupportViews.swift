@@ -5,6 +5,8 @@ import SwiftUI
 
 struct WhatsNewItem: Identifiable {
     let id = UUID()
+    /// The `WhatsNew.version` that introduced it.
+    var since = 1
     let symbol: String
     let title: String
     let detail: String
@@ -12,10 +14,12 @@ struct WhatsNewItem: Identifiable {
 
 /// Shown once after an update. Bump `version` and add items when something new ships.
 enum WhatsNew {
-    static let version = 1
+    static let version = 2
     static let seenKey = "whatsNewSeen"
 
     static let items: [WhatsNewItem] = [
+        WhatsNewItem(since: 2, symbol: "checklist", title: "Checklist hari ini",
+                     detail: "Tab baru \"Hari ini\": rutinitas yang muncul lagi setiap pagi, tugas yang terbawa kalau belum selesai, dan streak harian."),
         WhatsNewItem(symbol: "play.rectangle.fill", title: "Musik dari semua app",
                      detail: "YouTube di browser, Podcasts, VLC, Spotify, Music: cover, judul, dan tombol kontrolnya muncul di notch."),
         WhatsNewItem(symbol: "airpodspro", title: "Pop-up AirPods & Bluetooth",
@@ -34,6 +38,13 @@ enum WhatsNew {
 
     static var hasUnseen: Bool {
         UserDefaults.standard.integer(forKey: seenKey) < version
+    }
+
+    /// What's new since the version this Mac last saw (everything for a first look).
+    static var unseenItems: [WhatsNewItem] {
+        let seen = UserDefaults.standard.integer(forKey: seenKey)
+        let fresh = items.filter { $0.since > seen }
+        return fresh.isEmpty ? items : fresh
     }
 
     static func markSeen() {
@@ -59,7 +70,7 @@ struct WhatsNewView: View {
             }
             ScrollView {
                 VStack(alignment: .leading, spacing: 14) {
-                    ForEach(WhatsNew.items) { item in
+                    ForEach(WhatsNew.unseenItems) { item in
                         HStack(alignment: .top, spacing: 12) {
                             Image(systemName: item.symbol)
                                 .font(.system(size: 17, weight: .medium))

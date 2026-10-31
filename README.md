@@ -48,7 +48,7 @@ Notch dideteksi otomatis.
 | Download selesai / ambil screenshot | Notifikasi singkat, file langsung masuk Shelf (juga screenshot dari Lightshot dll.) |
 | AirPods / perangkat Bluetooth tersambung | Nama perangkat dan baterainya (kiri/kanan untuk AirPods) |
 | Geser dua jari di tab Musik | Kiri/kanan ganti lagu, atas/bawah atur volume |
-| Kursor diarahkan ke notch | Island terbuka dengan tab **Musik · Agenda · Sholat · Fokus · Shelf · Clipboard** |
+| Kursor diarahkan ke notch | Island terbuka dengan tab **Musik · Hari ini · Agenda · Sholat · Fokus · Shelf · Clipboard** |
 
 ### Maskot
 
@@ -75,6 +75,11 @@ Klik cover album di tab Musik untuk membuka Spotify / Apple Music.
 ### Tab di island yang terbuka
 
 - **Musik**: cover, judul, artis, progress, tombol ⏮ ⏯ ⏭.
+- **Hari ini**: checklist harian. **Rutinitas** (misalnya minum air, olahraga, baca Al-Qur'an) muncul lagi
+  tanpa centang setiap pagi. **Tugas sekali** hilang sehari setelah dicentang, dan yang belum selesai
+  terbawa ke hari berikutnya dengan tanda "dari kemarin". Ada streak 🔥 untuk hari berturut-turut semua
+  selesai, dan pagi hari island mengingatkan "Hari ini · 5 checklist". Klik kanan untuk menghapus atau
+  mengubah jenisnya. Disimpan di Mac ini saja.
 - **Agenda**: acara berikutnya dari app Calendar (iCloud, Google, Outlook yang sudah ditambahkan
   ke Calendar) dengan hitung mundur, lalu daftar sisa acara hari ini dan besok.
   Tombol **Gabung** muncul kalau ada link Zoom, Google Meet, Teams, Webex, atau FaceTime di acaranya.
@@ -227,6 +232,7 @@ Sources/
   SettingsViews.swift     jendela Pengaturan + layar sambutan
   SupportViews.swift      "Yang baru", laporkan masalah (info teknis tanpa data pribadi)
   HotKeys.swift           pintasan keyboard global (tanpa izin)
+  Checklist.swift         checklist "Hari ini" (rutinitas harian, tugas, streak)
 index.html                halaman download (GitHub Pages, dari folder utama)
 sign-local.sh             tanda tangan per Mac supaya izin tidak hilang saat update
 Resources/AppIcon.svg     logo (sumber); AppIcon.png dipakai build.sh untuk ikon app

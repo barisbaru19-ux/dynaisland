@@ -23,6 +23,7 @@ struct ExpandedView: View {
             Group {
                 switch model.openTab {
                 case .music: MusicTabView(model: model)
+                case .today: TodayTabView(model: model)
                 case .agenda: AgendaTabView(model: model)
                 case .prayer: PrayerTabView(model: model)
                 case .focus: FocusTabView(model: model)
@@ -61,7 +62,7 @@ struct IslandTabBar: View {
 
     var body: some View {
         HStack(spacing: 4) {
-            ForEach(IslandTab.allCases, id: \.self) { tab in
+            ForEach(IslandTab.allCases.filter { $0 != .today || model.checklistEnabled }, id: \.self) { tab in
                 let selected = model.openTab == tab
                 Button(action: { model.openTab = tab }) {
                     HStack(spacing: 5) {
@@ -95,12 +96,14 @@ struct IslandTabBar: View {
 
     private func label(for tab: IslandTab) -> String {
         if tab == .shelf && !model.shelf.isEmpty { return "Shelf \(model.shelf.count)" }
+        if tab == .today && !model.checklist.isEmpty { return "Hari ini \(model.checklistDoneCount)/\(model.checklist.count)" }
         return tab.title
     }
 
     private func hasActivity(_ tab: IslandTab) -> Bool {
         switch tab {
         case .music: return model.track?.isPlaying == true
+        case .today: return model.checklistDoneCount < model.checklist.count
         case .agenda: return model.meetingAlert != nil
         case .prayer: return model.prayerAlert != nil
         case .focus: return model.focus != nil
@@ -112,6 +115,7 @@ struct IslandTabBar: View {
     private func activityColor(_ tab: IslandTab) -> Color {
         switch tab {
         case .music: return model.accent
+        case .today: return NoticeTint.green.color
         case .agenda: return NoticeTint.blue.color
         case .prayer: return NoticeTint.yellow.color
         case .focus: return model.focus?.tint ?? .white

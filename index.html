@@ -70,8 +70,8 @@
   .ring { width: 18px; height: 18px; } .ring circle { fill: none; stroke-width: 3; }
   .lvl { width: 64px; height: 4px; border-radius: 2px; background: #333; overflow: hidden; } .lvl b { display: block; height: 100%; background: #fff; }
 
-  .tabs { display: flex; gap: 6px; justify-content: center; font-size: 11px; margin-bottom: 12px; }
-  .tabs span { padding: 3px 9px; border-radius: 10px; color: #8d8d99; } .tabs span.on { background: #26262c; color: #fff; }
+  .tabs { display: flex; gap: 4px; justify-content: center; font-size: 11px; margin-bottom: 10px; }
+  .tabs span { padding: 3px 8px; border-radius: 10px; color: #8d8d99; white-space: nowrap; } .tabs span.on { background: #26262c; color: #fff; }
   .row { display: flex; gap: 12px; align-items: center; }
   .bigcover { width: 50px; height: 50px; border-radius: 12px; background: linear-gradient(135deg, #ff6b4a, #ffb547); flex: none; }
   .t1 { font-size: 14px; } .t2 { font-size: 12px; color: #9a9aa8; font-weight: 500; }
@@ -199,6 +199,7 @@
       <div class="feature"><div class="ico">📥</div><h3>Shelf + AirDrop</h3><p>Seret file ke notch. Download dan screenshot baru langsung masuk. Seret keluar atau AirDrop.</p></div>
       <div class="feature"><div class="ico">📋</div><h3>Riwayat clipboard</h3><p>20 teks dan gambar terakhir. <kbd>⌃⌥V</kbd>, klik, tempel. Password tidak dicatat.</p></div>
       <div class="feature"><div class="ico">🎧</div><h3>AirPods &amp; Bluetooth</h3><p>Nama perangkat dan baterainya muncul saat tersambung, seperti di iPhone.</p></div>
+      <div class="feature"><div class="ico">✅</div><h3>Checklist hari ini</h3><p>Rutinitas yang muncul lagi setiap pagi, tugas yang terbawa kalau belum selesai, dan streak 🔥.</p></div>
       <div class="feature"><div class="ico">⏱️</div><h3>Timer fokus</h3><p>15–60 menit, istirahat 5 menit otomatis, ring progres di samping kamera.</p></div>
       <div class="feature"><div class="ico">🔊</div><h3>Volume &amp; gestur</h3><p>Satu pop-up volume yang rapi. Geser dua jari untuk ganti lagu atau atur volume.</p></div>
     </div>
@@ -336,7 +337,7 @@
     var RING = '<svg class="ring" viewBox="0 0 18 18"><circle cx="9" cy="9" r="7" stroke="#333"/>' +
       '<circle cx="9" cy="9" r="7" stroke="#ff9f38" stroke-dasharray="44" stroke-dashoffset="6" stroke-linecap="round" transform="rotate(-90 9 9)"/></svg>';
     function tabs(on) {
-      return '<div class="tabs">' + ['Musik', 'Agenda', 'Sholat', 'Fokus', 'Shelf', 'Clipboard'].map(function (t) {
+      return '<div class="tabs">' + ['Musik', 'Hari ini', 'Agenda', 'Sholat', 'Fokus', 'Shelf', 'Clipboard'].map(function (t) {
         return '<span class="' + (t === on ? 'on' : '') + '">' + t + '</span>';
       }).join('') + '</div>';
     }
@@ -354,6 +355,13 @@
         body: tabs('') + '<div class="mascots"><div>' + moci('happy', 46) + 'Moci</div><div>' + kucing('idle', 46) +
           'Kucing</div><div>' + bit('idle', 46) + 'Bit</div></div>',
         title: 'Pilih maskotmu', sub: 'Berjoget saat musik, tidur saat Mac didiamkan, menyapa saat island dibuka' },
+      { label: 'Checklist', w: 440, h: 190, open: true,
+        body: tabs('Hari ini') +
+          '<div class="clip" style="background:none;padding:0 2px 2px;margin-bottom:2px"><span style="font-size:13px;font-weight:700">2 dari 3 selesai</span><span style="color:#ff9f38">🔥 5 hari</span></div>' +
+          '<div class="clip" style="padding:4px 10px;margin-bottom:4px"><span><b style="color:#4cd964">✓</b>&nbsp; <s style="color:#8d8d99">Minum air 8 gelas</s></span><span>↻</span></div>' +
+          '<div class="clip" style="padding:4px 10px;margin-bottom:4px"><span><b style="color:#4cd964">✓</b>&nbsp; <s style="color:#8d8d99">Baca Al-Qur\'an</s></span><span>↻</span></div>' +
+          '<div class="clip" style="padding:4px 10px;margin-bottom:4px"><span><b style="color:#8d8d99">○</b>&nbsp; Kirim laporan ke klien</span><span style="color:#ffcc33">dari kemarin</span></div>',
+        title: 'Checklist hari ini', sub: 'Rutinitas muncul lagi setiap pagi, tugas yang belum selesai terbawa' },
       { label: 'Jadwal sholat', w: 470, left: '<span class="yellow">' + I.moon + '</span>Maghrib', right: '<span class="yellow" data-count="581"></span>',
         title: 'Hitung mundur 10 menit sebelum sholat', sub: 'Parameter Kemenag, 25 kota, tanpa internet' },
       { label: 'Meeting', w: 470, left: '<span class="blue">' + I.video + '</span>Daily standup', right: '<span class="blue" data-count="252"></span>',
