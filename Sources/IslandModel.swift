@@ -385,6 +385,17 @@ final class IslandModel: ObservableObject {
     private var completedDays: [String] = UserDefaults.standard.stringArray(forKey: ChecklistStorage.completedDaysKey) ?? []
     /// "Good morning" notice waiting for the first moment the Mac is in use.
     private var morningNoticePending = false
+    // Synced with Apple Reminders (iPhone / iPad via iCloud)
+    @Published var remindersSync: Bool = UserDefaults.standard.bool(forKey: "remindersSync") {
+        didSet { UserDefaults.standard.set(remindersSync, forKey: "remindersSync") }
+    }
+    @Published var remindersAccess: CalendarAccess = .notDetermined
+    @Published var remindersLists: [ReminderList] = []
+    /// List new items go to ("" = the default Reminders list).
+    @Published var remindersListID: String = UserDefaults.standard.string(forKey: "remindersListID") ?? "" {
+        didSet { UserDefaults.standard.set(remindersListID, forKey: "remindersListID") }
+    }
+    weak var reminders: RemindersSync?
 
     // Keyboard shortcuts
     @Published var hotKeysEnabled: Bool = (UserDefaults.standard.object(forKey: "hotKeysEnabled") as? Bool) ?? true {
@@ -717,6 +728,11 @@ final class IslandModel: ObservableObject {
     }
 
     func addChecklistItem(_ title: String, routine: Bool) {
+        if remindersSync {
+            reminders?.add(title: title, routine: routine)
+            react(.happy, seconds: 1.2)
+            return
+        }
         rolloverChecklistIfNeeded()
         let clean = title.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !clean.isEmpty else { return }
@@ -730,6 +746,9 @@ final class IslandModel: ObservableObject {
         let wasAllDone = !checklist.isEmpty && checklistDoneCount == checklist.count
         checklist[index].doneOn = isDoneToday(checklist[index]) ? nil : checklistDay
         let nowDone = isDoneToday(checklist[index])
+        if let remote = checklist[index].remoteID {
+            reminders?.setCompleted(remote, completed: nowDone)   // shown right away, saved to Reminders
+        }
         checklistChanged()
         guard nowDone else { return }
         if checklistDoneCount == checklist.count && !wasAllDone {
@@ -743,6 +762,7 @@ final class IslandModel: ObservableObject {
     }
 
     func removeChecklistItem(_ id: UUID) {
+        if let remote = checklist.first(where: { $0.id == id })?.remoteID { reminders?.remove(remote) }
         checklist.removeAll { $0.id == id }
         checklistChanged()
     }
@@ -750,6 +770,7 @@ final class IslandModel: ObservableObject {
     func setChecklistRoutine(_ id: UUID, routine: Bool) {
         guard let index = checklist.firstIndex(where: { $0.id == id }) else { return }
         checklist[index].isRoutine = routine
+        if let remote = checklist[index].remoteID { reminders?.setRoutine(remote, routine: routine) }
         checklistChanged()
     }
 
@@ -759,8 +780,14 @@ final class IslandModel: ObservableObject {
         let today = DayKey.string(now)
         guard today != checklistDay else { return }
         checklistDay = today
-        checklist.removeAll { !$0.isRoutine && $0.doneOn != nil && $0.doneOn != today }
         UserDefaults.standard.set(today, forKey: ChecklistStorage.dayKey)
+        if remindersSync {
+            // Reminders itself brings routines back and keeps unfinished ones (as overdue).
+            reminders?.refresh()
+            if checklistEnabled { morningNoticePending = true }
+            return
+        }
+        checklist.removeAll { !$0.isRoutine && $0.doneOn != nil && $0.doneOn != today }
         checklistChanged()
         if checklistEnabled && !checklist.isEmpty { morningNoticePending = true }
     }
@@ -786,8 +813,23 @@ final class IslandModel: ObservableObject {
         }
         completedDays = Array(completedDays.suffix(400))
         checklistStreak = streak()
-        ChecklistStorage.save(checklist)
+        if !remindersSync { ChecklistStorage.save(checklist) }   // reminders live in Reminders
         UserDefaults.standard.set(completedDays, forKey: ChecklistStorage.completedDaysKey)
+    }
+
+    /// The checklist as read from Reminders.
+    func applyRemoteChecklist(_ items: [ChecklistItem]) {
+        guard remindersSync else { return }
+        if checklist != items {
+            checklist = items
+            checklistChanged()
+        }
+    }
+
+    /// Back to the checklist stored on this Mac (sync switched off).
+    func useLocalChecklist() {
+        checklist = ChecklistStorage.loadItems()
+        checklistChanged()
     }
 
     private func streak(now: Date = Date()) -> Int {
@@ -804,6 +846,7 @@ final class IslandModel: ObservableObject {
 
     /// Recomputed once at launch.
     func prepareChecklist() {
+        if remindersSync { checklist = [] }   // filled from Reminders in a moment
         rolloverChecklistIfNeeded()
         checklistStreak = streak()
     }

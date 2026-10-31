@@ -30,6 +30,10 @@
     <string>DynaIsland menampilkan hitung mundur ke meeting berikutnya dan tombol Gabung. Data kalender tidak keluar dari Mac.</string>
     <key>NSCalendarsFullAccessUsageDescription</key>
     <string>DynaIsland menampilkan hitung mundur ke meeting berikutnya dan tombol Gabung. Data kalender tidak keluar dari Mac.</string>
+    <key>NSRemindersUsageDescription</key>
+    <string>DynaIsland menampilkan dan mencentang checklist Hari ini dari app Reminders, supaya tersinkron dengan iPhone dan iPad.</string>
+    <key>NSRemindersFullAccessUsageDescription</key>
+    <string>DynaIsland menampilkan dan mencentang checklist Hari ini dari app Reminders, supaya tersinkron dengan iPhone dan iPad.</string>
     <key>NSBluetoothAlwaysUsageDescription</key>
     <string>DynaIsland menampilkan pop-up saat AirPods atau perangkat Bluetooth tersambung, lengkap dengan baterainya.</string>
     <key>NSDownloadsFolderUsageDescription</key>

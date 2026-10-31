@@ -14,10 +14,12 @@ struct WhatsNewItem: Identifiable {
 
 /// Shown once after an update. Bump `version` and add items when something new ships.
 enum WhatsNew {
-    static let version = 2
+    static let version = 3
     static let seenKey = "whatsNewSeen"
 
     static let items: [WhatsNewItem] = [
+        WhatsNewItem(since: 3, symbol: "arrow.triangle.2.circlepath", title: "Checklist tersinkron dengan Reminders",
+                     detail: "Nyalakan di Pengaturan → Fitur: checklist Hari ini ikut muncul di iPhone dan iPad, dan sebaliknya."),
         WhatsNewItem(since: 2, symbol: "checklist", title: "Checklist hari ini",
                      detail: "Tab baru \"Hari ini\": rutinitas yang muncul lagi setiap pagi, tugas yang terbawa kalau belum selesai, dan streak harian."),
         WhatsNewItem(symbol: "play.rectangle.fill", title: "Musik dari semua app",
@@ -146,6 +148,7 @@ enum Diagnostics {
         let bluetooth = BluetoothMonitor.isAllowed ? "ya" : (BluetoothMonitor.isDenied ? "ditolak" : "belum")
         lines.append("Izin: kalender=\(calendar), folder=\(folders), aksesibilitas=\(MediaKeys.isTrusted ? "ya" : "belum"), bluetooth=\(bluetooth), automation-ditolak=\(model.automationDenied)")
 
+        lines.append("Checklist: \(model.checklist.count) item, reminders-sync=\(model.remindersSync), akses-reminders=\(model.remindersAccess)")
         lines.append("Fitur: maskot=\(model.mascot.rawValue), sholat=\(model.prayerEnabled) (\(model.prayerCityName)), meeting=\(model.meetingEnabled), clipboard=\(model.clipboardEnabled), shelf-otomatis=\(model.autoShelfEnabled), bluetooth=\(model.bluetoothEnabled), gestur=\(model.gesturesEnabled), pintasan=\(model.hotKeysEnabled), volume=\(model.volumeHUDMode.rawValue), update-otomatis=\(model.autoUpdateEnabled), sembunyi-idle=\(model.hideWhenIdle)")
 
         if !HotKeys.taken.isEmpty {

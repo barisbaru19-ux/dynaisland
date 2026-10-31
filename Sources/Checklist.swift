@@ -14,6 +14,8 @@ struct ChecklistItem: Codable, Identifiable, Equatable {
     var doneOn: String?
     /// Day it was added (to mark tasks carried over from earlier days).
     var addedOn: String
+    /// Set when the item is a reminder in Apple Reminders.
+    var remoteID: String? = nil
 }
 
 enum DayKey {
@@ -73,7 +75,9 @@ struct TodayTabView: View {
                 Text("Mulai hari dengan checklist")
                     .font(.system(size: 12, weight: .medium))
                     .foregroundColor(Color.white.opacity(0.85))
-                Text("Rutinitas muncul lagi setiap pagi. Tugas yang belum selesai terbawa ke besok.")
+                Text(model.remindersSync
+                     ? "Pengingat yang jatuh tempo hari ini di app Reminders muncul di sini, juga dari iPhone."
+                     : "Rutinitas muncul lagi setiap pagi. Tugas yang belum selesai terbawa ke besok.")
                     .font(.system(size: 10))
                     .foregroundColor(Color.white.opacity(0.45))
                     .multilineTextAlignment(.center)
@@ -130,9 +134,17 @@ struct TodayTabView: View {
                 Text(done == total ? "Semua selesai!" : "\(done) dari \(total) selesai")
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundColor(.white)
-                Text(Date().formatted(.dateTime.weekday(.wide).day().month(.wide)))
-                    .font(.system(size: 10))
-                    .foregroundColor(Color.white.opacity(0.5))
+                HStack(spacing: 4) {
+                    Text(Date().formatted(.dateTime.weekday(.wide).day().month(.wide)))
+                    if model.remindersSync {
+                        Image(systemName: "arrow.triangle.2.circlepath")
+                            .font(.system(size: 8, weight: .bold))
+                        Text("Reminders")
+                    }
+                }
+                .font(.system(size: 10))
+                .foregroundColor(Color.white.opacity(0.5))
+                .help(model.remindersSync ? "Tersinkron dengan app Reminders di iPhone, iPad, dan Mac" : "")
             }
             Spacer(minLength: 6)
             if model.checklistStreak > 0 {

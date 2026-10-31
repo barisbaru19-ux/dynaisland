@@ -23,6 +23,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var updater: Updater?
     private var bluetooth: BluetoothMonitor?
     private var systemNowPlaying: SystemNowPlaying?
+    private var remindersSync: RemindersSync?
     private var statusItem: NSStatusItem?
     private var settingsWindow: NSWindow?
     private var onboardingWindow: NSWindow?
@@ -45,6 +46,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         updater.startChecking()
         bluetooth = BluetoothMonitor(model: model)
         model.prepareChecklist()
+        let reminders = RemindersSync(model: model)
+        model.reminders = reminders
+        remindersSync = reminders
+        reminders.start()
         // Music from every app (YouTube in a browser, Podcasts…), when the bundled adapter works here.
         let system = SystemNowPlaying(model: model)
         model.player?.system = system
@@ -181,6 +186,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             model.addChecklistItem(field.stringValue, routine: routine.state == .on)
         }
         NSApp.deactivate()   // back to the app you were using
+    }
+
+    func setRemindersSync(_ enabled: Bool) {
+        if enabled { remindersSync?.enable() } else { remindersSync?.disable() }
     }
 
     func hotKeysSettingChanged() {

@@ -135,6 +135,7 @@ final class IslandController: NSObject {
         model.updater?.considerAutoUpdate(idleSeconds: idle)
         model.rolloverChecklistIfNeeded()
         model.showMorningChecklistIfNeeded()
+        model.reminders?.tick()
     }
 
     /// Volume keys: handled by DynaIsland (no macOS HUD) only in "island" mode and with permission.

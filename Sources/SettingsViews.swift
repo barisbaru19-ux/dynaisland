@@ -126,6 +126,29 @@ struct FeatureSettings: View {
                                 DynaIslandApp.delegate.bluetoothSettingChanged()
                             }))
                         Toggle("Checklist hari ini (rutinitas di-reset setiap pagi)", isOn: $model.checklistEnabled)
+                        if model.checklistEnabled {
+                            Toggle("Sinkron dengan app Reminders (ikut muncul di iPhone dan iPad)", isOn: Binding(
+                                get: { model.remindersSync },
+                                set: { value in DynaIslandApp.delegate.setRemindersSync(value) }))
+                                .padding(.leading, 18)
+                            if model.remindersSync {
+                                Picker("Item baru masuk ke", selection: $model.remindersListID) {
+                                    Text("Daftar default").tag("")
+                                    ForEach(model.remindersLists) { list in
+                                        Text(list.title).tag(list.id)
+                                    }
+                                }
+                                .frame(width: 300)
+                                .padding(.leading, 18)
+                            }
+                            Text(model.remindersSync
+                                 ? "Menampilkan pengingat yang jatuh tempo hari ini dari semua daftar. Rutinitas = pengingat yang berulang setiap hari."
+                                 : "Checklist yang sudah ada ikut dipindahkan ke Reminders saat sinkron dinyalakan.")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                                .padding(.leading, 18)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
                         Toggle("Riwayat clipboard", isOn: $model.clipboardEnabled)
                         Toggle("Download & screenshot otomatis ke Shelf", isOn: $model.autoShelfEnabled)
                         Toggle("Gestur di tab Musik: geser untuk ganti lagu, scroll untuk volume",
@@ -295,6 +318,15 @@ struct PermissionList: View {
                               state: calendarState) {
                     model.calendar?.requestAccess()
                 }
+                PermissionRow(symbol: "checklist", title: "Reminders",
+                              detail: "Checklist Hari ini tersinkron dengan iPhone dan iPad",
+                              state: remindersState) {
+                    if model.remindersAccess == .denied {
+                        PermissionList.openPrivacy("Privacy_Reminders")
+                    } else {
+                        DynaIslandApp.delegate.setRemindersSync(true)
+                    }
+                }
                 PermissionRow(symbol: "folder", title: "Folder Downloads dan Desktop",
                               detail: "Download dan screenshot baru langsung masuk Shelf",
                               state: folderState) {
@@ -330,6 +362,14 @@ struct PermissionList: View {
 
     private var calendarState: PermissionState {
         switch model.calendarAccess {
+        case .granted: return .granted
+        case .notDetermined: return .needed
+        case .denied: return .denied
+        }
+    }
+
+    private var remindersState: PermissionState {
+        switch model.remindersAccess {
         case .granted: return .granted
         case .notDetermined: return .needed
         case .denied: return .denied

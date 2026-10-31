@@ -79,7 +79,10 @@ Klik cover album di tab Musik untuk membuka Spotify / Apple Music.
   tanpa centang setiap pagi. **Tugas sekali** hilang sehari setelah dicentang, dan yang belum selesai
   terbawa ke hari berikutnya dengan tanda "dari kemarin". Ada streak 🔥 untuk hari berturut-turut semua
   selesai, dan pagi hari island mengingatkan "Hari ini · 5 checklist". Klik kanan untuk menghapus atau
-  mengubah jenisnya. Disimpan di Mac ini saja.
+  mengubah jenisnya. Disimpan di Mac ini, atau nyalakan **Sinkron dengan app Reminders** di
+  Pengaturan → Fitur supaya checklist ikut muncul di iPhone dan iPad (dan sebaliknya): yang tampil adalah
+  pengingat yang jatuh tempo hari ini dari semua daftar, rutinitas menjadi pengingat yang berulang setiap
+  hari, dan checklist yang sudah ada ikut dipindahkan ke Reminders.
 - **Agenda**: acara berikutnya dari app Calendar (iCloud, Google, Outlook yang sudah ditambahkan
   ke Calendar) dengan hitung mundur, lalu daftar sisa acara hari ini dan besok.
   Tombol **Gabung** muncul kalau ada link Zoom, Google Meet, Teams, Webex, atau FaceTime di acaranya.
@@ -138,7 +141,7 @@ memandu memilih maskot dan memberi izin satu per satu.
   sembunyikan saat tidak ada aktivitas.
 - **Fitur**: jadwal sholat + kota (25 kota), pop-up volume, pengingat meeting, pop-up Bluetooth,
   riwayat clipboard, download & screenshot ke Shelf, gestur.
-- **Izin**: status setiap izin (Kalender, folder, Aksesibilitas, Bluetooth, kontrol musik) dengan tombol
+- **Izin**: status setiap izin (Kalender, Reminders, folder, Aksesibilitas, Bluetooth, kontrol musik) dengan tombol
   untuk mengizinkan.
 - **Umum**: buka otomatis saat Mac menyala (macOS 13+), perbarui, coba animasi, keluar.
 
@@ -233,6 +236,7 @@ Sources/
   SupportViews.swift      "Yang baru", laporkan masalah (info teknis tanpa data pribadi)
   HotKeys.swift           pintasan keyboard global (tanpa izin)
   Checklist.swift         checklist "Hari ini" (rutinitas harian, tugas, streak)
+  RemindersSync.swift     sinkron checklist dengan app Reminders (iPhone/iPad lewat iCloud)
 index.html                halaman download (GitHub Pages, dari folder utama)
 sign-local.sh             tanda tangan per Mac supaya izin tidak hilang saat update
 Resources/AppIcon.svg     logo (sumber); AppIcon.png dipakai build.sh untuk ikon app
