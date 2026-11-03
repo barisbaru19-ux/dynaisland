@@ -36,17 +36,21 @@ struct IslandContainer: View {
                                 shoulder: layout.shoulder)
 
         ZStack {
+            // Shadow of the plain shape: on the whole island, the animated mascot and equalizer
+            // would redraw it every frame and make it flicker. Small enough to fade out inside the panel.
             shape.fill(Color.black)
-            content
-                .padding(.horizontal, layout.shoulder)
-                .transition(.asymmetric(
-                    insertion: AnyTransition.opacity.animation(.easeOut(duration: 0.22).delay(0.1)),
-                    removal: AnyTransition.opacity.animation(.easeIn(duration: 0.08))))
-                .id(mode.contentKey)
+                .shadow(color: Color.black.opacity(mode.isExpanded ? 0.3 : 0), radius: 8, x: 0, y: 4)
+            ZStack {
+                content
+                    .padding(.horizontal, layout.shoulder)
+                    .transition(.asymmetric(
+                        insertion: AnyTransition.opacity.animation(.easeOut(duration: 0.22).delay(0.1)),
+                        removal: AnyTransition.opacity.animation(.easeIn(duration: 0.08))))
+                    .id(mode.contentKey)
+            }
+            .clipShape(shape)
         }
         .frame(width: size.width, height: size.height)
-        .clipShape(shape)
-        .shadow(color: Color.black.opacity(mode.isExpanded ? 0.35 : 0), radius: 14, x: 0, y: 6)
         .opacity(mode == .hidden ? 0 : 1)
         .animation(.spring(response: 0.42, dampingFraction: 0.8), value: mode)
         .animation(.spring(response: 0.42, dampingFraction: 0.8), value: layout)
