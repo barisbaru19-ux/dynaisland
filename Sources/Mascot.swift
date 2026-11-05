@@ -59,25 +59,13 @@ struct MascotView: View {
     var kind: MascotKind? = nil
 
     var body: some View {
-        let kind = self.kind ?? model.mascot
-        let base = model.mascotBaseMood
-        let reaction = model.mascotReaction
-        // Every frame lays out the whole window, and this runs all day: keep frames few.
-        // While it sleeps nobody has touched the Mac for 2 minutes, so even fewer.
-        let interval = base == .sleep ? 1.0 / 4.0 : 1.0 / 15.0
-        TimelineView(.animation(minimumInterval: interval, paused: false)) { context in
-            let now = context.date
-            let mood = MascotMood.resolve(base: base, reaction: reaction, at: now)
-            let time = now.timeIntervalSinceReferenceDate
-            let look = MascotView.cursorLook()
-            Canvas { ctx, canvasSize in
-                MascotPainter.draw(kind, mood: mood, time: time, look: look, in: ctx, size: canvasSize)
-            }
-        }
-        // A little extra room on top for ears and hops; layout only counts `size`.
-        .frame(width: size * MascotPainter.aspect, height: size * MascotPainter.headroom)
-        .frame(width: size * MascotPainter.aspect, height: size, alignment: .bottom)
-        .allowsHitTesting(false)
+        MascotHost(scene: MascotScene(kind: kind ?? model.mascot,
+                                      base: model.mascotBaseMood,
+                                      reaction: model.mascotReaction))
+            // A little extra room on top for ears and hops; layout only counts `size`.
+            .frame(width: size * MascotPainter.aspect, height: size * MascotPainter.headroom)
+            .frame(width: size * MascotPainter.aspect, height: size, alignment: .bottom)
+            .allowsHitTesting(false)
     }
 
     /// Where the cursor is relative to the top of the screen: x -1…1 (left…right), y 0…1 (down).
@@ -87,6 +75,152 @@ struct MascotView: View {
         let anchor = CGPoint(x: screen.frame.midX - 125, y: screen.frame.maxY - 16)
         return CGPoint(x: max(-1, min(1, (mouse.x - anchor.x) / 360)),
                        y: max(0, min(1, (anchor.y - mouse.y) / 420)))
+    }
+}
+
+struct MascotScene: Equatable {
+    var kind: MascotKind
+    var base: MascotMood
+    var reaction: MascotReaction?
+}
+
+/// Draws the mascot in a plain AppKit view with its own timer. Animating with SwiftUI made
+/// every frame re-render the whole island window (layout, constraints, Metal), which cost
+/// far more CPU than the drawing itself. A redraw here touches only this little view.
+struct MascotHost: NSViewRepresentable {
+    var scene: MascotScene
+
+    func makeNSView(context: Context) -> MascotLayerView {
+        let view = MascotLayerView()
+        view.scene = scene
+        return view
+    }
+
+    func updateNSView(_ view: MascotLayerView, context: Context) {
+        if view.scene != scene { view.scene = scene }
+    }
+}
+
+final class MascotLayerView: NSView {
+    var scene = MascotScene(kind: .off, base: .idle, reaction: nil) {
+        didSet {
+            needsDisplay = true
+            if oldValue.base != scene.base { restartTimer() }
+        }
+    }
+    private var timer: Timer?
+
+    override init(frame: NSRect) {
+        super.init(frame: frame)
+        wantsLayer = true
+        layerContentsRedrawPolicy = .onSetNeedsDisplay
+    }
+
+    required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
+
+    override var isFlipped: Bool { true }   // same y-down space as the drawing code
+    override var isOpaque: Bool { false }
+    /// Never takes clicks, hovers or file drags: those belong to the island around it.
+    override func hitTest(_ point: NSPoint) -> NSView? { nil }
+
+    override func viewDidMoveToWindow() {
+        super.viewDidMoveToWindow()
+        restartTimer()
+    }
+
+    override func viewDidChangeBackingProperties() {
+        super.viewDidChangeBackingProperties()
+        layer?.contentsScale = window?.backingScaleFactor ?? 2
+        needsDisplay = true
+    }
+
+    private func restartTimer() {
+        timer?.invalidate()
+        timer = nil
+        guard window != nil else { return }
+        // Every frame costs CPU all day, so few frames. While it sleeps nobody has touched
+        // the Mac for 2 minutes, so even fewer.
+        let interval = scene.base == .sleep ? 1.0 / 4.0 : 1.0 / 15.0
+        let timer = Timer(timeInterval: interval, repeats: true) { [weak self] _ in
+            self?.needsDisplay = true
+        }
+        timer.tolerance = interval * 0.2
+        RunLoop.main.add(timer, forMode: .common)
+        self.timer = timer
+    }
+
+    override func draw(_ dirtyRect: NSRect) {
+        guard let cg = NSGraphicsContext.current?.cgContext else { return }
+        let now = Date()
+        let mood = MascotMood.resolve(base: scene.base, reaction: scene.reaction, at: now)
+        MascotPainter.draw(scene.kind, mood: mood, time: now.timeIntervalSinceReferenceDate,
+                           look: MascotView.cursorLook(), in: MascotPen(cg), size: bounds.size)
+    }
+}
+
+/// The few drawing calls the mascots use, on Core Graphics. A value type like SwiftUI's
+/// GraphicsContext: a copy keeps its own transform.
+struct MascotPen {
+    enum Shading { case color(Color) }
+
+    private let cg: CGContext
+    private var transform = CGAffineTransform.identity
+
+    init(_ cg: CGContext) { self.cg = cg }
+
+    mutating func translateBy(x: CGFloat, y: CGFloat) { transform = transform.translatedBy(x: x, y: y) }
+    mutating func scaleBy(x: CGFloat, y: CGFloat) { transform = transform.scaledBy(x: x, y: y) }
+    mutating func rotate(by angle: Angle) { transform = transform.rotated(by: CGFloat(angle.radians)) }
+
+    func fill(_ path: Path, with shading: Shading) {
+        drawing { cg in
+            cg.setFillColor(shading.cgColor)
+            cg.addPath(path.cgPath)
+            cg.fillPath()
+        }
+    }
+
+    func stroke(_ path: Path, with shading: Shading, style: StrokeStyle) {
+        drawing { cg in
+            cg.setStrokeColor(shading.cgColor)
+            cg.setLineWidth(style.lineWidth)
+            cg.setLineCap(style.lineCap)
+            cg.addPath(path.cgPath)
+            cg.strokePath()
+        }
+    }
+
+    /// Text centred on `point`, like GraphicsContext.draw(_:at:).
+    func draw(_ string: String, size: CGFloat, weight: NSFont.Weight, rounded: Bool,
+              color: Color, at point: CGPoint) {
+        var font = NSFont.systemFont(ofSize: size, weight: weight)
+        if rounded, let descriptor = font.fontDescriptor.withDesign(.rounded),
+           let roundedFont = NSFont(descriptor: descriptor, size: size) {
+            font = roundedFont
+        }
+        let text = NSAttributedString(string: string, attributes: [.font: font, .foregroundColor: NSColor(color)])
+        let box = text.size()
+        drawing { cg in
+            NSGraphicsContext.saveGraphicsState()
+            NSGraphicsContext.current = NSGraphicsContext(cgContext: cg, flipped: true)
+            text.draw(at: CGPoint(x: point.x - box.width / 2, y: point.y - box.height / 2))
+            NSGraphicsContext.restoreGraphicsState()
+        }
+    }
+
+    private func drawing(_ body: (CGContext) -> Void) {
+        cg.saveGState()
+        cg.concatenate(transform)
+        body(cg)
+        cg.restoreGState()
+    }
+}
+
+private extension MascotPen.Shading {
+    var cgColor: CGColor {
+        switch self {
+        case .color(let color): return NSColor(color).cgColor
+        }
     }
 }
 
@@ -103,7 +237,7 @@ enum MascotPainter {
     private static let mouthDark = rgb(0x4A1B0C)
 
     static func draw(_ kind: MascotKind, mood: MascotMood, time t: Double, look: CGPoint,
-                     in context: GraphicsContext, size: CGSize) {
+                     in context: MascotPen, size: CGSize) {
         guard kind != .off, size.height > 0 else { return }
         var canvas = context
         let scale = size.height / 36
@@ -130,7 +264,7 @@ enum MascotPainter {
 
     // MARK: Characters
 
-    private static func drawMoci(in ctx: GraphicsContext, face: Face) {
+    private static func drawMoci(in ctx: MascotPen, face: Face) {
         ctx.fill(Path(ellipseIn: CGRect(x: 3, y: 9.5, width: 26, height: 21)), with: .color(rgb(0xF4F1EA)))
         ctx.fill(Path(ellipseIn: CGRect(x: 7, y: 11.5, width: 6, height: 3)), with: .color(Color.white.opacity(0.85)))
         let cheek = rgb(0xED93B1).opacity(0.85)
@@ -141,7 +275,7 @@ enum MascotPainter {
         drawMouth(in: ctx, face.mouth, at: CGPoint(x: 16, y: 22.6))
     }
 
-    private static func drawCat(in ctx: GraphicsContext, face: Face, time t: Double) {
+    private static func drawCat(in ctx: MascotPen, face: Face, time t: Double) {
         let fur = rgb(0xEF9F27)
         let innerEar = rgb(0xF0997B)
         // The right ear twitches every few seconds.
@@ -185,7 +319,7 @@ enum MascotPainter {
         }
     }
 
-    private static func drawBit(in ctx: GraphicsContext, face: Face, mood: MascotMood, time t: Double) {
+    private static func drawBit(in ctx: MascotPen, face: Face, mood: MascotMood, time t: Double) {
         let green = rgb(0x97C459)
         let dark = rgb(0x639922)
         let mouthLine = rgb(0x3B6D11)
@@ -244,7 +378,7 @@ enum MascotPainter {
 
     // MARK: Face parts
 
-    private static func drawEyes(in ctx: GraphicsContext, face: Face, centers: [CGPoint], rx: CGFloat, ry: CGFloat) {
+    private static func drawEyes(in ctx: MascotPen, face: Face, centers: [CGPoint], rx: CGFloat, ry: CGFloat) {
         let line = StrokeStyle(lineWidth: 0.9, lineCap: .round)
         for c in centers {
             switch face.eyes {
@@ -271,7 +405,7 @@ enum MascotPainter {
         }
     }
 
-    private static func drawMouth(in ctx: GraphicsContext, _ mouth: Face.Mouth, at m: CGPoint) {
+    private static func drawMouth(in ctx: MascotPen, _ mouth: Face.Mouth, at m: CGPoint) {
         let line = StrokeStyle(lineWidth: 0.9, lineCap: .round)
         switch mouth {
         case .smile:
@@ -302,15 +436,14 @@ enum MascotPainter {
 
     // MARK: Effects beside the character
 
-    private static func drawEffects(in ctx: GraphicsContext, mood: MascotMood, time t: Double) {
+    private static func drawEffects(in ctx: MascotPen, mood: MascotMood, time t: Double) {
         switch mood {
         case .sleep:
             for i in 0..<2 {
                 let phase = (t / 2.4 + Double(i) * 0.5).truncatingRemainder(dividingBy: 1)
-                let letter = Text("z")
-                    .font(.system(size: i == 0 ? 9 : 7, weight: .heavy, design: .rounded))
-                    .foregroundColor(Color.white.opacity(sin(phase * .pi) * 0.9))
-                ctx.draw(letter, at: CGPoint(x: 31 + phase * 4, y: 14 - phase * 10))
+                ctx.draw("z", size: i == 0 ? 9 : 7, weight: .heavy, rounded: true,
+                         color: Color.white.opacity(sin(phase * .pi) * 0.9),
+                         at: CGPoint(x: 31 + phase * 4, y: 14 - phase * 10))
             }
         case .charging:
             var bolt = Path()
@@ -337,10 +470,9 @@ enum MascotPainter {
             ctx.fill(drop, with: .color(rgb(0x85B7EB).opacity(1 - drip * 0.7)))
         case .music:
             let phase = (t / 1.6).truncatingRemainder(dividingBy: 1)
-            let note = Text("♪")
-                .font(.system(size: 10, weight: .bold))
-                .foregroundColor(Color.white.opacity(sin(phase * .pi) * 0.9))
-            ctx.draw(note, at: CGPoint(x: 34 + sin(phase * 6) * 1.2, y: 17 - phase * 11))
+            ctx.draw("♪", size: 10, weight: .bold, rounded: false,
+                     color: Color.white.opacity(sin(phase * .pi) * 0.9),
+                     at: CGPoint(x: 34 + sin(phase * 6) * 1.2, y: 17 - phase * 11))
         case .happy:
             let spots = [CGPoint(x: 33, y: 6), CGPoint(x: 37, y: 13)]
             for (i, spot) in spots.enumerated() {
@@ -348,16 +480,13 @@ enum MascotPainter {
                 sparkle(in: ctx, at: spot, radius: CGFloat(1 + 1.6 * twinkle), opacity: twinkle)
             }
         case .surprised:
-            let mark = Text("!")
-                .font(.system(size: 11, weight: .heavy, design: .rounded))
-                .foregroundColor(rgb(0xFAC775))
-            ctx.draw(mark, at: CGPoint(x: 33, y: 8))
+            ctx.draw("!", size: 11, weight: .heavy, rounded: true, color: rgb(0xFAC775), at: CGPoint(x: 33, y: 8))
         case .idle, .eating:
             break
         }
     }
 
-    private static func sparkle(in ctx: GraphicsContext, at c: CGPoint, radius r: CGFloat, opacity: Double) {
+    private static func sparkle(in ctx: MascotPen, at c: CGPoint, radius r: CGFloat, opacity: Double) {
         var path = Path()
         path.move(to: CGPoint(x: c.x, y: c.y - r))
         path.addQuadCurve(to: CGPoint(x: c.x + r, y: c.y), control: c)
