@@ -288,9 +288,11 @@ final class CalendarMonitor: NSObject {
 
 // MARK: - New downloads and screenshots → Shelf
 
-/// Every 2 seconds, looks for new files in Downloads and the screenshot folder and puts them
-/// on the shelf once they're complete. Listing runs off the main thread, so the macOS
-/// "allow access to Downloads?" prompt never freezes the island.
+/// Puts new files from Downloads and the screenshot folder on the shelf once they're complete.
+/// macOS tells us when a folder's contents change, so a folder with thousands of files costs
+/// nothing while it stays the same; it's only listed again after a change, and once a minute
+/// as a safety net. Listing runs off the main thread, so the macOS "allow access to Downloads?"
+/// prompt never freezes the island.
 enum WatchedKind: Sendable { case downloads, screenshots }
 
 struct WatchedFolder: Sendable {
@@ -311,13 +313,31 @@ struct FolderSnapshot: Sendable {
     let entries: [WatchedEntry]?
 }
 
+/// A fresh look at the unfinished files of a folder, without listing the folder.
+struct FolderRecheck: Sendable {
+    let folder: WatchedFolder
+    let files: [RecheckedFile]
+}
+
+struct RecheckedFile: Sendable {
+    let entry: WatchedEntry
+    let siblings: Set<String>
+}
+
 @MainActor
 final class FolderWatcher {
     private let model: IslandModel
     private var known: [String: Set<String>] = [:]   // folder path → names seen
     private var pending: [String: Int] = [:]           // file path → size at the last look
-    private var lastScan = Date.distantPast
-    private var scanning = false
+    private var sources: [String: DispatchSourceFileSystemObject] = [:]   // folder path → change events
+    private var changed: Set<String> = []     // folders to list again
+    private var readable: [String: Bool] = [:]
+    private var lastLook = Date.distantPast
+    private var lastFullScan = Date.distantPast
+    private var working = false
+
+    /// Catches changes macOS doesn't report, such as on some network folders.
+    private static let fullScanInterval: TimeInterval = 60
 
     /// Still being written by a browser.
     private static let partialExtensions: Set<String> = ["crdownload", "download", "part", "partial", "opdownload", "tmp", "temp"]
@@ -326,33 +346,106 @@ final class FolderWatcher {
         self.model = model
     }
 
-    /// Called once a second.
+    /// Called once a second; looks at most every 2 seconds, and only at what may have changed.
     func tick(now: Date = Date()) {
-        guard now.timeIntervalSince(lastScan) >= 2, !scanning else { return }
-        lastScan = now
+        guard now.timeIntervalSince(lastLook) >= 2, !working else { return }
+        lastLook = now
         guard model.autoShelfEnabled, model.onboarded else {
+            stopWatching()
             known.removeAll()
             pending.removeAll()
             return
         }
 
-        scanning = true
         let folders = FolderWatcher.folders()
+        forgetFolders(except: Set(folders.map { $0.path }))
+        let unwatched = folders.filter { sources[$0.path] == nil }.map { $0.path }
+
+        let fullScan = now.timeIntervalSince(lastFullScan) >= FolderWatcher.fullScanInterval
+        if fullScan { lastFullScan = now }
+        let toList = folders.filter { folder in
+            fullScan || changed.contains(folder.path) || sources[folder.path] == nil || readable[folder.path] != true
+        }
+        changed.subtract(toList.map { $0.path })
+
+        // Files still being written in the other folders: a look at those files is enough.
+        // (An empty file can wait here forever, so this must not list the whole folder.)
+        let listedPaths = Set(toList.map { $0.path })
+        let waiting = folders.filter { !listedPaths.contains($0.path) }.map { folder in
+            (folder, pending.keys.filter { ($0 as NSString).deletingLastPathComponent == folder.path })
+        }.filter { !$0.1.isEmpty }
+
+        guard !toList.isEmpty || !waiting.isEmpty else { return }
+        working = true
         Task.detached(priority: .utility) { [weak self] in
-            let snapshots = folders.map { FolderWatcher.snapshot(of: $0) }
-            await self?.apply(snapshots)
+            let descriptors = unwatched.map { (path: $0, descriptor: open($0, O_EVTONLY)) }
+            let snapshots = toList.map { FolderWatcher.snapshot(of: $0) }
+            let rechecks = waiting.map { FolderRecheck(folder: $0.0, files: FolderWatcher.look(at: $0.1, in: $0.0)) }
+            await self?.apply(snapshots, rechecks, descriptors: descriptors, folders: folders)
         }
     }
 
-    private func apply(_ snapshots: [FolderSnapshot]) {
-        scanning = false
-        let readable = snapshots.allSatisfy { $0.entries != nil }
-        if model.folderAccess != readable { model.folderAccess = readable }
+    private func apply(_ snapshots: [FolderSnapshot], _ rechecks: [FolderRecheck],
+                       descriptors: [(path: String, descriptor: Int32)], folders: [WatchedFolder]) {
+        working = false
+        for (path, descriptor) in descriptors { watch(path, descriptor: descriptor) }
+        for snapshot in snapshots { readable[snapshot.folder.path] = snapshot.entries != nil }
+        let access = folders.allSatisfy { readable[$0.path] == true }
+        if model.folderAccess != access { model.folderAccess = access }
         guard model.autoShelfEnabled else { return }
         for snapshot in snapshots {
             guard let entries = snapshot.entries else { continue }
             process(snapshot.folder, entries)
         }
+        for recheck in rechecks {
+            for file in recheck.files where pending[file.entry.path] != nil {
+                consider(file.entry, in: recheck.folder, siblings: file.siblings)
+            }
+        }
+    }
+
+    // MARK: Change events
+
+    private func watch(_ path: String, descriptor: Int32) {
+        guard descriptor >= 0 else { return }   // tried again on the next look
+        if sources[path] != nil {
+            close(descriptor)
+            return
+        }
+        let source = DispatchSource.makeFileSystemObjectSource(fileDescriptor: descriptor,
+                                                               eventMask: [.write, .delete, .rename, .revoke],
+                                                               queue: .main)
+        source.setEventHandler { [weak self, weak source] in
+            let folderGone = source?.data.isDisjoint(with: [.delete, .rename, .revoke]) == false
+            Task { @MainActor in self?.folderChanged(path, gone: folderGone) }
+        }
+        source.setCancelHandler { close(descriptor) }
+        source.resume()
+        sources[path] = source
+        changed.insert(path)   // anything that changed while this was being set up
+    }
+
+    private func folderChanged(_ path: String, gone: Bool) {
+        changed.insert(path)
+        if gone { sources.removeValue(forKey: path)?.cancel() }   // watch it again by its path
+    }
+
+    private func forgetFolders(except keep: Set<String>) {
+        for path in sources.keys where !keep.contains(path) {
+            sources.removeValue(forKey: path)?.cancel()
+            changed.remove(path)
+            readable[path] = nil
+            for file in pending.keys where (file as NSString).deletingLastPathComponent == path {
+                pending[file] = nil
+            }
+        }
+    }
+
+    private func stopWatching() {
+        sources.values.forEach { $0.cancel() }
+        sources.removeAll()
+        changed.removeAll()
+        readable.removeAll()
     }
 
     private func process(_ folder: WatchedFolder, _ entries: [WatchedEntry]) {
@@ -446,21 +539,33 @@ final class FolderWatcher {
 
     nonisolated private static func snapshot(of folder: WatchedFolder) -> FolderSnapshot {
         let url = URL(fileURLWithPath: folder.path, isDirectory: true)
-        let keys: [URLResourceKey] = [.fileSizeKey, .isDirectoryKey]
-        guard let items = try? FileManager.default.contentsOfDirectory(at: url, includingPropertiesForKeys: keys,
+        guard let items = try? FileManager.default.contentsOfDirectory(at: url, includingPropertiesForKeys: entryKeys,
                                                                         options: [.skipsHiddenFiles]) else {
             return FolderSnapshot(folder: folder, entries: nil)
         }
-        let entries = items.map { item -> WatchedEntry in
-            let values = try? item.resourceValues(forKeys: Set(keys))
-            let isDirectory = values?.isDirectory ?? false
-            return WatchedEntry(path: item.standardizedFileURL.path,
-                         name: item.lastPathComponent,
-                         size: values?.fileSize ?? 0,
-                         isDirectory: isDirectory,
-                         isScreenCapture: folder.kind == .screenshots && !isDirectory && isScreenCapture(item))
+        return FolderSnapshot(folder: folder, entries: items.map { entry(for: $0, in: folder) })
+    }
+
+    nonisolated private static func look(at paths: [String], in folder: WatchedFolder) -> [RecheckedFile] {
+        let manager = FileManager.default
+        return paths.compactMap { path in
+            guard manager.fileExists(atPath: path) else { return nil }   // the folder's change event handles this
+            let item = entry(for: URL(fileURLWithPath: path), in: folder)
+            let partial = ["part", "crdownload", "download"].filter { manager.fileExists(atPath: path + "." + $0) }
+            return RecheckedFile(entry: item, siblings: Set(partial.map { item.name + "." + $0 }))
         }
-        return FolderSnapshot(folder: folder, entries: entries)
+    }
+
+    nonisolated private static let entryKeys: [URLResourceKey] = [.fileSizeKey, .isDirectoryKey]
+
+    nonisolated private static func entry(for item: URL, in folder: WatchedFolder) -> WatchedEntry {
+        let values = try? item.resourceValues(forKeys: Set(entryKeys))
+        let isDirectory = values?.isDirectory ?? false
+        return WatchedEntry(path: item.standardizedFileURL.path,
+                            name: item.lastPathComponent,
+                            size: values?.fileSize ?? 0,
+                            isDirectory: isDirectory,
+                            isScreenCapture: folder.kind == .screenshots && !isDirectory && isScreenCapture(item))
     }
 
     /// Screenshots from macOS (tagged with an extended attribute) and from other apps

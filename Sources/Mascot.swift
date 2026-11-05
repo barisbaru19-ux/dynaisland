@@ -62,8 +62,9 @@ struct MascotView: View {
         let kind = self.kind ?? model.mascot
         let base = model.mascotBaseMood
         let reaction = model.mascotReaction
-        // Sleeping needs fewer frames.
-        let interval = base == .sleep ? 1.0 / 12.0 : 1.0 / 30.0
+        // Every frame lays out the whole window, and this runs all day: keep frames few.
+        // While it sleeps nobody has touched the Mac for 2 minutes, so even fewer.
+        let interval = base == .sleep ? 1.0 / 4.0 : 1.0 / 15.0
         TimelineView(.animation(minimumInterval: interval, paused: false)) { context in
             let now = context.date
             let mood = MascotMood.resolve(base: base, reaction: reaction, at: now)
