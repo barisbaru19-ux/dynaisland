@@ -91,7 +91,8 @@ if [[ "${MODE}" == "--release" ]]; then
 fi
 
 # Tutup versi lama yang mungkin masih jalan
-pkill -x "${APP_NAME}" 2>/dev/null || true
+pkill -a -x "${APP_NAME}" 2>/dev/null || true   # -a: also when the app itself started this update
+pkill -f "${APP_NAME}.app/Contents/Resources/mediaremote-adapter.pl" 2>/dev/null || true
 sleep 0.3
 
 if [[ "${MODE}" == "--install" ]]; then

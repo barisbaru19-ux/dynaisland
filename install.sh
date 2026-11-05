@@ -42,7 +42,10 @@ trap 'rm -rf "${TMP}"' EXIT
 if curl -fsSL "${RELEASE_URL}" -o "${TMP}/app.zip"; then
   echo "• App siap pakai terunduh"
   ditto -x -k "${TMP}/app.zip" "${TMP}/app"
-  pkill -x "${APP_NAME}" 2>/dev/null || true
+  # -a: when the app runs this update itself it is our parent, and pkill skips parents
+  # without it, so the old copy kept running and `open` below just brought it back.
+  pkill -a -x "${APP_NAME}" 2>/dev/null || true
+  pkill -f "${APP_NAME}.app/Contents/Resources/mediaremote-adapter.pl" 2>/dev/null || true
   sleep 0.5
   rm -rf "${DEST}"
   ditto "${TMP}/app/${APP_NAME}.app" "${DEST}"
